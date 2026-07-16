@@ -1,0 +1,308 @@
+// lib/features/Manage/manage_category_screen.dart
+import 'package:flutter/material.dart';
+import '../../core/utils/database_helper.dart';
+
+class ManageCategoryScreen extends StatefulWidget {
+  const ManageCategoryScreen({super.key});
+
+  @override
+  State<ManageCategoryScreen> createState() => _ManageCategoryScreenState();
+}
+
+class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
+  final DatabaseHelper databaseHelper = DatabaseHelper();
+  List<Map<String, dynamic>> categories = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      setState(() => isLoading = true);
+      final fetchedCategories = await databaseHelper.getCategories(withFields: false);
+
+      // Convert to list of maps for easier display
+      categories = fetchedCategories.map((category) {
+        return {
+          'id': category.id,
+          'name': category.name,
+          'icon': category.icon,
+          'color': category.color,
+          'description': category.description,
+          'isSystem': category.isSystem == 1,
+        };
+      }).toList();
+
+      setState(() => isLoading = false);
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Manage Categories'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchCategories,
+          ),
+        ],
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage != null
+              ? Center(child: Text(errorMessage!))
+              : ListView.builder(
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    return Card(
+                      margin: const EdgeInsets.all(8),
+                      elevation: 2,
+                      child: ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Color(int.parse(category['color'])),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(child: Icon(Icons.category, size: 20)),
+                        ),
+                        title: Text(category['name']),
+                        subtitle: Text(category['description']),
+                        trailing: const Icon(Icons.arrow_forward),
+                        onTap: () {
+                          // Navigate to category details or edit screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CategoryDetailScreen(
+                                categoryId: category['id'],
+                                categoryName: category['name'],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Navigate to add new category screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddCategoryScreen()),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+// Helper screens for navigation
+class CategoryDetailScreen extends StatelessWidget {
+  final String categoryId;
+  final String categoryName;
+
+  const CategoryDetailScreen({
+    required this.categoryId,
+    required this.categoryName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Category Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              // Navigate to edit category screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditCategoryScreen(categoryId: categoryId),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<Asset>>(
+        future: databaseHelper.getAssetsByCategory(categoryId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final assets = snapshot.data ?? [];
+
+          return ListView.builder(
+            itemCount: assets.length,
+            itemBuilder: (context, index) {
+              final asset = assets[index];
+              // Convert to a simple display format
+              return Card(
+                margin: const EdgeInsets.all(8),
+                child: ListTile(
+                  title: Text(asset.name),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (asset.notes != null && asset.notes!.isNotEmpty)
+                        Text(asset.notes!),
+                      // Add more fields as needed
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class EditCategoryScreen extends StatefulWidget {
+  final String categoryId;
+
+  const EditCategoryScreen({required this.categoryId});
+
+  @override
+  State<EditCategoryScreen> createState() => _EditCategoryScreenState();
+}
+
+class _EditCategoryScreenState extends State<EditCategoryScreen> {
+  // Implement your edit logic here
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Edit Category')),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: databaseHelper.getCategoryById(widget.categoryId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final category = snapshot.data;
+
+          // Implement form fields for editing
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: TextEditingController(text: category['name']),
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+                // Add more fields as needed
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await databaseHelper.updateCategory(Category.fromMap(category));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Category updated successfully')),
+                      );
+                      Navigator.pop(context);
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class AddCategoryScreen extends StatefulWidget {
+  const AddCategoryScreen();
+
+  @override
+  State<AddCategoryScreen> createState() => _AddCategoryScreenState();
+}
+
+class _AddCategoryScreenState extends State<AddCategoryScreen> {
+  final _formKey = GlobalKey<FormState>();
+  String? _name;
+  String? _icon;
+  String? _color;
+  bool _isSystem = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Add New Category')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Name'),
+                onSaved: (value) => _name = value,
+              ),
+              // Add more fields as needed
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    try {
+                      final category = Category(
+                        id: '', // Will be generated by database
+                        name: _name!,
+                        icon: _icon ?? '',
+                        color: _color ?? '',
+                        description: '', // Add default empty description
+                        isSystem: _isSystem,
+                        sortOrder: 0, // Default value
+                        createdAt: DateTime.now().toIso8601String(),
+                        updatedAt: DateTime.now().toIso8601String(),
+                      );
+
+                      await databaseHelper.insertCategory(category);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Category added successfully')),
+                      );
+                      Navigator.pop(context);
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Add Category'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

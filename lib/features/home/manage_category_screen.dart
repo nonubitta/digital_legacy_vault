@@ -1,0 +1,374 @@
+import 'package:flutter/material.dart';
+
+import '../../core/theme/app_theme.dart';
+import '../../data/database/database_helper.dart';
+import '../../data/models/category.dart';
+
+class ManageCategoryScreen extends StatefulWidget {
+	const ManageCategoryScreen({super.key});
+
+	@override
+	State<ManageCategoryScreen> createState() => _ManageCategoryScreenState();
+}
+
+class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
+	static const Map<String, IconData> _iconOptions = {
+		'folder': Icons.folder_outlined,
+		'account_balance': Icons.account_balance_rounded,
+		'savings': Icons.savings_rounded,
+		'trending_up': Icons.trending_up_rounded,
+		'home': Icons.home_rounded,
+		'directions_car': Icons.directions_car_rounded,
+		'badge': Icons.badge_outlined,
+		'description': Icons.description_outlined,
+		'credit_card': Icons.credit_card_rounded,
+	};
+
+	static const List<String> _colorOptions = [
+		'#4C8DFF',
+		'#E8A33D',
+		'#34D399',
+		'#A78BFA',
+		'#F2795A',
+		'#2D3E50',
+		'#3B5998',
+		'#00838F',
+	];
+
+	final _db = DatabaseHelper();
+
+	List<Category> _categories = [];
+	bool _isLoading = true;
+
+	@override
+	void initState() {
+		super.initState();
+		_load();
+	}
+
+	Future<void> _load() async {
+		setState(() => _isLoading = true);
+		try {
+			final categories = await _db.getCategories();
+			if (!mounted) return;
+			setState(() {
+				_categories = categories;
+				_isLoading = false;
+			});
+		} catch (_) {
+			if (!mounted) return;
+			setState(() => _isLoading = false);
+			ScaffoldMessenger.of(context).showSnackBar(
+				const SnackBar(content: Text('Failed to load categories.')),
+			);
+		}
+	}
+
+	IconData _iconForName(String? name) => _iconOptions[name] ?? Icons.folder_outlined;
+
+	Color _parseColor(String? hex) {
+		if (hex == null || hex.isEmpty) return AppTheme.accentColor;
+		final normalized = hex.startsWith('#') ? hex.substring(1) : hex;
+		final value = int.tryParse('FF$normalized', radix: 16);
+		if (value == null) return AppTheme.accentColor;
+		return Color(value);
+	}
+
+	Future<void> _showAddCategoryDialog() async {
+		final nameController = TextEditingController();
+		final descriptionController = TextEditingController();
+		var selectedIcon = 'folder';
+		var selectedColor = _colorOptions.first;
+
+		final shouldAdd = await showDialog<bool>(
+			context: context,
+			builder: (dialogContext) {
+				return StatefulBuilder(
+					builder: (context, setDialogState) {
+						return AlertDialog(
+							title: const Text('Add Category'),
+							content: SingleChildScrollView(
+								child: Column(
+									mainAxisSize: MainAxisSize.min,
+									crossAxisAlignment: CrossAxisAlignment.start,
+									children: [
+										TextField(
+											controller: nameController,
+											textInputAction: TextInputAction.next,
+											decoration: const InputDecoration(
+												labelText: 'Category name',
+												hintText: 'Example: Insurance policies',
+											),
+										),
+										const SizedBox(height: 12),
+										TextField(
+											controller: descriptionController,
+											minLines: 2,
+											maxLines: 3,
+											decoration: const InputDecoration(
+												labelText: 'Description (optional)',
+											),
+										),
+										const SizedBox(height: 16),
+										const Text('Icon'),
+										const SizedBox(height: 8),
+										Wrap(
+											spacing: 8,
+											runSpacing: 8,
+											children: _iconOptions.entries.map((entry) {
+												final isSelected = selectedIcon == entry.key;
+												return InkWell(
+													onTap: () => setDialogState(() => selectedIcon = entry.key),
+													borderRadius: BorderRadius.circular(12),
+													child: Container(
+														padding: const EdgeInsets.all(10),
+														decoration: BoxDecoration(
+															borderRadius: BorderRadius.circular(12),
+															border: Border.all(
+																color: isSelected
+																		? Theme.of(context).colorScheme.primary
+																		: Colors.grey.shade300,
+																width: isSelected ? 2 : 1,
+															),
+														),
+														child: Icon(entry.value, size: 20),
+													),
+												);
+											}).toList(),
+										),
+										const SizedBox(height: 16),
+										const Text('Color'),
+										const SizedBox(height: 8),
+										Wrap(
+											spacing: 10,
+											runSpacing: 10,
+											children: _colorOptions.map((hex) {
+												final isSelected = selectedColor == hex;
+												return InkWell(
+													onTap: () => setDialogState(() => selectedColor = hex),
+													borderRadius: BorderRadius.circular(16),
+													child: Container(
+														width: 28,
+														height: 28,
+														decoration: BoxDecoration(
+															color: _parseColor(hex),
+															shape: BoxShape.circle,
+															border: Border.all(
+																color: isSelected
+																		? Theme.of(context).colorScheme.primary
+																		: Colors.transparent,
+																width: 2,
+															),
+														),
+													),
+												);
+											}).toList(),
+										),
+									],
+								),
+							),
+							actions: [
+								TextButton(
+									onPressed: () => Navigator.of(dialogContext).pop(false),
+									child: const Text('Cancel'),
+								),
+								FilledButton(
+									onPressed: () => Navigator.of(dialogContext).pop(true),
+									child: const Text('Add'),
+								),
+							],
+						);
+					},
+				);
+			},
+		);
+
+		if (shouldAdd != true) return;
+
+		final name = nameController.text.trim();
+		if (name.isEmpty) {
+			if (!mounted) return;
+			ScaffoldMessenger.of(context).showSnackBar(
+				const SnackBar(content: Text('Category name is required.')),
+			);
+			return;
+		}
+
+		final exists = _categories.any(
+			(category) => category.name.toLowerCase() == name.toLowerCase(),
+		);
+		if (exists) {
+			if (!mounted) return;
+			ScaffoldMessenger.of(context).showSnackBar(
+				SnackBar(content: Text('"$name" already exists.')),
+			);
+			return;
+		}
+
+		final nextSortOrder =
+				_categories.isEmpty ? 0 : _categories.map((c) => c.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
+
+		try {
+			await _db.insertCategory(
+				Category(
+					name: name,
+					icon: selectedIcon,
+					color: selectedColor,
+					description: descriptionController.text.trim().isEmpty
+							? null
+							: descriptionController.text.trim(),
+					sortOrder: nextSortOrder,
+				),
+			);
+			if (!mounted) return;
+			await _load();
+			ScaffoldMessenger.of(context).showSnackBar(
+				SnackBar(content: Text('"$name" added.')),
+			);
+		} catch (_) {
+			if (!mounted) return;
+			ScaffoldMessenger.of(context).showSnackBar(
+				const SnackBar(content: Text('Unable to add category.')),
+			);
+		}
+	}
+
+	Future<void> _confirmDelete(Category category) async {
+		if (category.isSystem) {
+			ScaffoldMessenger.of(context).showSnackBar(
+				const SnackBar(content: Text('System categories cannot be deleted.')),
+			);
+			return;
+		}
+
+		final shouldDelete = await showDialog<bool>(
+			context: context,
+			builder: (dialogContext) {
+				return AlertDialog(
+					title: const Text('Delete Category'),
+					content: Text(
+						'Delete "${category.name}"?\n\nAll assets in this category will also be deleted.',
+					),
+					actions: [
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(false),
+							child: const Text('Cancel'),
+						),
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(true),
+							style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+							child: const Text('Delete'),
+						),
+					],
+				);
+			},
+		);
+
+		if (shouldDelete != true) return;
+
+		try {
+			await _db.deleteCategory(category.id);
+			if (!mounted) return;
+			await _load();
+			ScaffoldMessenger.of(context).showSnackBar(
+				SnackBar(content: Text('"${category.name}" deleted.')),
+			);
+		} catch (error) {
+			if (!mounted) return;
+			ScaffoldMessenger.of(context).showSnackBar(
+				SnackBar(content: Text(error.toString())),
+			);
+		}
+	}
+
+	@override
+	Widget build(BuildContext context) {
+		return Scaffold(
+			backgroundColor: AppTheme.backgroundColor,
+			appBar: AppBar(
+				title: const Text('Manage Categories'),
+				actions: [
+					IconButton(
+						tooltip: 'Refresh',
+						onPressed: _load,
+						icon: const Icon(Icons.refresh),
+					),
+				],
+			),
+			body: _isLoading
+					? const Center(child: CircularProgressIndicator())
+					: _categories.isEmpty
+							? Center(
+									child: Padding(
+										padding: const EdgeInsets.all(24),
+										child: Column(
+											mainAxisSize: MainAxisSize.min,
+											children: [
+												Icon(
+													Icons.category_outlined,
+													size: 64,
+													color: Colors.grey.shade500,
+												),
+												const SizedBox(height: 12),
+												const Text('No categories yet'),
+												const SizedBox(height: 8),
+												Text(
+													'Tap + to create your first category.',
+													textAlign: TextAlign.center,
+													style: TextStyle(color: Colors.grey.shade700),
+												),
+											],
+										),
+									),
+								)
+							: RefreshIndicator(
+									onRefresh: _load,
+									child: ListView.separated(
+										padding: const EdgeInsets.all(16),
+										itemCount: _categories.length,
+										separatorBuilder: (_, __) => const SizedBox(height: 10),
+										itemBuilder: (_, index) {
+											final category = _categories[index];
+											return Card(
+												child: ListTile(
+													contentPadding: const EdgeInsets.symmetric(
+														horizontal: 16,
+														vertical: 8,
+													),
+													leading: CircleAvatar(
+														backgroundColor: _parseColor(category.color),
+														child: Icon(
+															_iconForName(category.icon),
+															color: Colors.white,
+														),
+													),
+													title: Text(category.name),
+													subtitle: Text(
+														category.description?.isNotEmpty == true
+																? category.description!
+																: (category.isSystem ? 'System category' : 'Custom category'),
+													),
+													trailing: category.isSystem
+															? const Tooltip(
+																	message: 'System category',
+																	child: Icon(Icons.lock_outline),
+																)
+															: IconButton(
+																	tooltip: 'Delete',
+																	onPressed: () => _confirmDelete(category),
+																	icon: const Icon(Icons.delete_outline),
+																	color: AppTheme.errorColor,
+																),
+												),
+											);
+										},
+									),
+								),
+			floatingActionButton: FloatingActionButton.extended(
+				onPressed: _showAddCategoryDialog,
+				icon: const Icon(Icons.add),
+				label: const Text('Add Category'),
+			),
+		);
+	}
+}
