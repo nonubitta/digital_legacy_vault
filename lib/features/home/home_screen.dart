@@ -35,6 +35,10 @@ IconData _iconForName(String? name) {
       return Icons.home_rounded;
     case 'directions_car':
       return Icons.directions_car_rounded;
+    case 'badge':
+      return Icons.badge_outlined;
+    case 'credit_card':
+      return Icons.credit_card_rounded;
     default:
       return Icons.folder_rounded;
   }
@@ -80,11 +84,20 @@ class _HomeScreenState extends State<HomeScreen> {
       _dbHelper.getCategoryUsdTotals(),
       _appSettings.getVaultName(),
       _appSettings.getShowHomeAmounts(),
+      _appSettings.getDisabledSystemCategoryNames(),
     ]);
 
     final loadedCategories = results[0] as List<Category>;
+    final disabledSystemCategories = results[5] as Set<String>;
+    final visibleCategories = loadedCategories
+        .where(
+          (category) =>
+              !category.isSystem ||
+              !disabledSystemCategories.contains(category.name),
+        )
+        .toList();
     final systemCategoryPreviews = await Future.wait<MapEntry<String, String>>(
-      loadedCategories.where((category) => category.isSystem).map((
+      visibleCategories.where((category) => category.isSystem).map((
         category,
       ) async {
         final assets = await _dbHelper.getAssetsByCategory(category.id);
@@ -96,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     setState(() {
-      _categories = loadedCategories;
+      _categories = visibleCategories;
       _categoryCounts = results[1] as Map<String, int>;
       _categoryUsdTotals = results[2] as Map<String, double>;
       _categorySubtitlePreviews = {
@@ -108,16 +121,21 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  int get _totalAssets => _categoryCounts.values.fold(0, (s, c) => s + c);
-  double get _totalUsd => _categoryUsdTotals.values.fold(0.0, (s, v) => s + v);
+  int get _totalAssets =>
+      _categories.fold(0, (sum, category) => sum + _countFor(category.name));
+  double get _totalUsd =>
+      _categories.fold(0.0, (sum, category) => sum + _usdFor(category.name));
   int _countFor(String n) => _categoryCounts[n] ?? 0;
   double _usdFor(String n) => _categoryUsdTotals[n] ?? 0;
 
   String get _largestCategoryTitle {
-    if (_categoryUsdTotals.isEmpty || _totalUsd <= 0) return '\u2014';
-    return _categoryUsdTotals.entries
-        .reduce((a, b) => a.value >= b.value ? a : b)
-        .key;
+    if (_categories.isEmpty || _totalUsd <= 0) return '\u2014';
+    final withValues = _categories
+        .map((category) => MapEntry(category.name, _usdFor(category.name)))
+        .where((entry) => entry.value > 0)
+        .toList();
+    if (withValues.isEmpty) return '\u2014';
+    return withValues.reduce((a, b) => a.value >= b.value ? a : b).key;
   }
 
   Color _colorFor(Category cat, int i) =>

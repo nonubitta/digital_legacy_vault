@@ -44,7 +44,7 @@ class Vehicle extends BaseAsset {
     this.loanProvider,
     this.loanAccountNumber,
     this.loanBalance,
-  }) : super(category: 'Vehicles');
+  }) : super(category: 'Personal Property');
 
   @override
   Map<String, dynamic> toMap() {

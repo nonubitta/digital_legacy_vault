@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AppSettingsHelper {
@@ -8,6 +10,8 @@ class AppSettingsHelper {
   static const String _vaultNameKey = 'vault_name';
   static const String _showHomeAmountsKey = 'show_home_amounts';
   static const String _disclaimerAcceptedKey = 'disclaimer_accepted';
+  static const String _disabledSystemCategoriesKey =
+      'disabled_system_categories';
   static const String defaultVaultName = 'Legacy Vault';
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -53,6 +57,42 @@ class AppSettingsHelper {
     await _secureStorage.write(
       key: _disclaimerAcceptedKey,
       value: accepted.toString(),
+    );
+  }
+
+  Future<Set<String>> getDisabledSystemCategoryNames() async {
+    final saved = await _secureStorage.read(key: _disabledSystemCategoriesKey);
+    if (saved == null || saved.trim().isEmpty) {
+      return <String>{};
+    }
+
+    try {
+      final decoded = jsonDecode(saved);
+      if (decoded is! List) {
+        return <String>{};
+      }
+      return decoded.map((entry) => entry.toString()).toSet();
+    } catch (_) {
+      return <String>{};
+    }
+  }
+
+  Future<void> saveSystemCategoryEnabled(String categoryName, bool enabled) async {
+    final disabled = await getDisabledSystemCategoryNames();
+    if (enabled) {
+      disabled.remove(categoryName);
+    } else {
+      disabled.add(categoryName);
+    }
+
+    if (disabled.isEmpty) {
+      await _secureStorage.delete(key: _disabledSystemCategoriesKey);
+      return;
+    }
+
+    await _secureStorage.write(
+      key: _disabledSystemCategoriesKey,
+      value: jsonEncode(disabled.toList()..sort()),
     );
   }
 }

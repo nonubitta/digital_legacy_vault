@@ -67,7 +67,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Properties'),
+        title: const Text('Real Estate'),
         backgroundColor: AppTheme.backgroundColor,
       ),
       body: _isLoading
@@ -84,14 +84,14 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No properties yet',
+                        'No real estate yet',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: AppTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tap + to add your first property',
+                        'Tap + to add your first real estate entry',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -111,7 +111,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _navigateToForm(),
         icon: const Icon(Icons.add),
-        label: const Text('Add Property'),
+        label: const Text('Add Real Estate'),
       ),
     );
   }

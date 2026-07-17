@@ -19,6 +19,9 @@ class DatabaseHelper {
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
 
+  static const _categoryRealEstate = 'Real Estate';
+  static const _categoryPersonalProperty = 'Personal Property';
+
   static Database? _database;
   final _encryptionHelper = EncryptionHelper();
   static const _uuid = Uuid();
@@ -33,7 +36,7 @@ class DatabaseHelper {
     final path = join(await getDatabasesPath(), 'legacy_vault.db');
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
@@ -187,7 +190,7 @@ class DatabaseHelper {
         _FieldSpec('purchaseDate', 'Purchase Date', fieldType: 'date'),
         _FieldSpec('purchasePrice', 'Purchase Price', fieldType: 'number'),
       ]),
-      ('Properties', 'home', '#6A1B9A', 3, [
+      (_categoryRealEstate, 'home', '#6A1B9A', 3, [
         _FieldSpec('propertyType', 'Property Type', isRequired: true),
         _FieldSpec('address', 'Address', isRequired: true),
         _FieldSpec('city', 'City'),
@@ -205,8 +208,8 @@ class DatabaseHelper {
         _FieldSpec('insuranceProvider', 'Insurance Provider'),
         _FieldSpec('insurancePolicyNumber', 'Insurance Policy Number', isSensitive: true),
       ]),
-      ('Vehicles', 'directions_car', '#00838F', 4, [
-        _FieldSpec('vehicleType', 'Vehicle Type', isRequired: true),
+      (_categoryPersonalProperty, 'directions_car', '#00838F', 4, [
+        _FieldSpec('vehicleType', 'Property Type', isRequired: true),
         _FieldSpec('make', 'Make', isRequired: true),
         _FieldSpec('model', 'Model', isRequired: true),
         _FieldSpec('year', 'Year', fieldType: 'number', isRequired: true),
@@ -223,6 +226,36 @@ class DatabaseHelper {
         _FieldSpec('loanProvider', 'Loan Provider'),
         _FieldSpec('loanAccountNumber', 'Loan Account Number', isSensitive: true),
         _FieldSpec('loanBalance', 'Loan Balance', fieldType: 'number'),
+      ]),
+      ('Insurances', 'badge', '#5E35B1', 5, [
+        _FieldSpec('policyType', 'Policy Type', isRequired: true),
+        _FieldSpec('provider', 'Provider', isRequired: true),
+        _FieldSpec('policyNumber', 'Policy Number', isSensitive: true),
+        _FieldSpec('insuredItem', 'Insured Item / Person'),
+        _FieldSpec('coverageAmount', 'Coverage Amount', fieldType: 'number', isValueField: true),
+        _FieldSpec('premiumAmount', 'Premium Amount', fieldType: 'number'),
+        _FieldSpec('renewalDate', 'Renewal Date', fieldType: 'date'),
+        _FieldSpec('beneficiary', 'Beneficiary'),
+      ]),
+      ('Businesses & Income', 'trending_up', '#2E7D32', 6, [
+        _FieldSpec('incomeType', 'Income Type', isRequired: true),
+        _FieldSpec('sourceName', 'Source Name', isRequired: true),
+        _FieldSpec('ownershipPercent', 'Ownership %', fieldType: 'number'),
+        _FieldSpec('monthlyIncome', 'Monthly Income', fieldType: 'number'),
+        _FieldSpec('annualIncome', 'Annual Income', fieldType: 'number', isValueField: true),
+        _FieldSpec('accountNumber', 'Account / Tax ID', isSensitive: true),
+        _FieldSpec('contactName', 'Contact Name'),
+        _FieldSpec('contactPhone', 'Contact Phone'),
+      ]),
+      ('Debt', 'credit_card', '#C62828', 7, [
+        _FieldSpec('debtType', 'Debt Type', isRequired: true),
+        _FieldSpec('lender', 'Lender', isRequired: true),
+        _FieldSpec('accountNumber', 'Account Number', isSensitive: true),
+        _FieldSpec('currentBalance', 'Current Balance', fieldType: 'number', isValueField: true),
+        _FieldSpec('interestRate', 'Interest Rate %', fieldType: 'number'),
+        _FieldSpec('minimumPayment', 'Minimum Payment', fieldType: 'number'),
+        _FieldSpec('dueDate', 'Due Date', fieldType: 'date'),
+        _FieldSpec('securedBy', 'Secured By'),
       ]),
     ];
 
@@ -580,21 +613,21 @@ class DatabaseHelper {
   }
 
   Future<int> insertProperty(Property property) async {
-    final category = await _requiredCategory('Properties');
-    final asset = await _assetFromLegacyMap(categoryName: 'Properties', map: property.toMap());
+    final category = await _requiredCategory(_categoryRealEstate);
+    final asset = await _assetFromLegacyMap(categoryName: _categoryRealEstate, map: property.toMap());
     await insertAsset(asset, category.fields);
     return 1;
   }
 
   Future<List<Property>> getAllProperties() async {
-    final category = await _requiredCategory('Properties');
+    final category = await _requiredCategory(_categoryRealEstate);
     final assets = await getAssetsByCategory(category.id);
     return assets.map((asset) => Property.fromMap(_mapFromAsset(asset))).toList();
   }
 
   Future<int> updateProperty(Property property) async {
-    final category = await _requiredCategory('Properties');
-    final asset = await _assetFromLegacyMap(categoryName: 'Properties', map: property.toMap());
+    final category = await _requiredCategory(_categoryRealEstate);
+    final asset = await _assetFromLegacyMap(categoryName: _categoryRealEstate, map: property.toMap());
     return updateAsset(asset, category.fields);
   }
 
@@ -603,21 +636,21 @@ class DatabaseHelper {
   }
 
   Future<int> insertVehicle(Vehicle vehicle) async {
-    final category = await _requiredCategory('Vehicles');
-    final asset = await _assetFromLegacyMap(categoryName: 'Vehicles', map: vehicle.toMap());
+    final category = await _requiredCategory(_categoryPersonalProperty);
+    final asset = await _assetFromLegacyMap(categoryName: _categoryPersonalProperty, map: vehicle.toMap());
     await insertAsset(asset, category.fields);
     return 1;
   }
 
   Future<List<Vehicle>> getAllVehicles() async {
-    final category = await _requiredCategory('Vehicles');
+    final category = await _requiredCategory(_categoryPersonalProperty);
     final assets = await getAssetsByCategory(category.id);
     return assets.map((asset) => Vehicle.fromMap(_mapFromAsset(asset))).toList();
   }
 
   Future<int> updateVehicle(Vehicle vehicle) async {
-    final category = await _requiredCategory('Vehicles');
-    final asset = await _assetFromLegacyMap(categoryName: 'Vehicles', map: vehicle.toMap());
+    final category = await _requiredCategory(_categoryPersonalProperty);
+    final asset = await _assetFromLegacyMap(categoryName: _categoryPersonalProperty, map: vehicle.toMap());
     return updateAsset(asset, category.fields);
   }
 

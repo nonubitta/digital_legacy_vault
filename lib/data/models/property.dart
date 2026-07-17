@@ -42,7 +42,7 @@ class Property extends BaseAsset {
     this.propertyTaxInfo,
     this.insuranceProvider,
     this.insurancePolicyNumber,
-  }) : super(category: 'Properties');
+  }) : super(category: 'Real Estate');
 
   @override
   Map<String, dynamic> toMap() {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/utils/app_settings_helper.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/category.dart';
@@ -36,8 +37,10 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 	];
 
 	final _db = DatabaseHelper();
+	final _appSettings = AppSettingsHelper();
 
 	List<Category> _categories = [];
+	Set<String> _disabledSystemCategories = {};
 	bool _isLoading = true;
 
 	@override
@@ -49,10 +52,16 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 	Future<void> _load() async {
 		setState(() => _isLoading = true);
 		try {
-			final categories = await _db.getCategories();
+			final results = await Future.wait<dynamic>([
+				_db.getCategories(),
+				_appSettings.getDisabledSystemCategoryNames(),
+			]);
+			final categories = results[0] as List<Category>;
+			final disabled = results[1] as Set<String>;
 			if (!mounted) return;
 			setState(() {
 				_categories = categories;
+				_disabledSystemCategories = disabled;
 				_isLoading = false;
 			});
 		} catch (_) {
@@ -65,6 +74,31 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 	}
 
 	IconData _iconForName(String? name) => _iconOptions[name] ?? Icons.folder_outlined;
+
+	bool _isSystemCategoryEnabled(Category category) {
+		return !_disabledSystemCategories.contains(category.name);
+	}
+
+	Future<void> _toggleSystemCategory(Category category, bool enabled) async {
+		final previous = Set<String>.from(_disabledSystemCategories);
+		setState(() {
+			if (enabled) {
+				_disabledSystemCategories.remove(category.name);
+			} else {
+				_disabledSystemCategories.add(category.name);
+			}
+		});
+
+		try {
+			await _appSettings.saveSystemCategoryEnabled(category.name, enabled);
+		} catch (_) {
+			if (!mounted) return;
+			setState(() => _disabledSystemCategories = previous);
+			ScaffoldMessenger.of(context).showSnackBar(
+				const SnackBar(content: Text('Unable to update category visibility.')),
+			);
+		}
+	}
 
 	Color _parseColor(String? hex) {
 		if (hex == null || hex.isEmpty) return AppTheme.accentColor;
@@ -483,9 +517,9 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 				title: const Text('Manage Categories'),
 				actions: [
 					IconButton(
-						tooltip: 'Refresh',
-						onPressed: _load,
-						icon: const Icon(Icons.refresh),
+						tooltip: 'Add Category',
+						onPressed: _showAddCategoryDialog,
+						icon: const Icon(Icons.add),
 					),
 				],
 			),
@@ -570,15 +604,20 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 																),
 																title: Text(category.name),
 																subtitle: Text(
-																	category.description?.isNotEmpty == true
-																			? category.description!
-																			: (category.isSystem ? 'System category' : 'Custom category'),
+																		category.description?.isNotEmpty == true
+																				? category.description!
+																				: (category.isSystem
+																						? (_isSystemCategoryEnabled(category)
+																								? 'System category (On)'
+																								: 'System category (Off)')
+																						: 'Custom category'),
 																),
 																trailing: category.isSystem
-																		? const Tooltip(
-																				message: 'System category',
-																				child: Icon(Icons.lock_outline),
-																			)
+																				? Switch.adaptive(
+																						value: _isSystemCategoryEnabled(category),
+																						onChanged: (enabled) =>
+																								_toggleSystemCategory(category, enabled),
+																					)
 																		: Row(
 																			mainAxisSize: MainAxisSize.min,
 																			children: [
@@ -603,11 +642,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 										),
 									],
 								),
-			floatingActionButton: FloatingActionButton.extended(
-				onPressed: _showAddCategoryDialog,
-				icon: const Icon(Icons.add),
-				label: const Text('Add Category'),
-			),
+			// Add button moved to AppBar; FAB removed.
 		);
 	}
 }

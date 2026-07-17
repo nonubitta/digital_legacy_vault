@@ -133,6 +133,10 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
   Widget build(BuildContext context) {
     final title =
         widget.asset == null ? 'Add ${widget.category.name}' : 'Edit ${widget.asset!.name}';
+    final valueFields = _fields.where(_isValueLikeField).toList();
+    final valueFieldIds = valueFields.map((f) => f.id).toSet();
+    final detailFields =
+        _fields.where((f) => !valueFieldIds.contains(f.id)).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -165,10 +169,14 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
             ),
             const SizedBox(height: 12),
             _currencyDropdown(),
+            for (final field in valueFields) ...[
+              const SizedBox(height: 12),
+              _buildFieldInput(field),
+            ],
             const SizedBox(height: 24),
-            if (_fields.isNotEmpty) ...[
+            if (detailFields.isNotEmpty) ...[
               _section('Details'),
-              for (final field in _fields) ...[
+              for (final field in detailFields) ...[
                 _buildFieldInput(field),
                 const SizedBox(height: 12),
               ],
@@ -202,6 +210,11 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
   }
 
   Widget _buildFieldInput(CategoryField field) {
+    final dropdownOptions = _dropdownOptionsForField(field);
+    if (dropdownOptions != null) {
+      return _dropdownField(field, dropdownOptions);
+    }
+
     switch (field.fieldType) {
       case FieldType.boolean:
         return _boolField(field);
@@ -210,7 +223,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       default:
         return _textField(
           controller: _ctrlMap[field.name]!,
-          label: field.label,
+          label: _displayLabelForField(field),
           isRequired: field.isRequired,
           obscure: field.isSensitive,
           obscureKey: field.name,
@@ -224,6 +237,150 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
               : null,
         );
     }
+  }
+
+  String _displayLabelForField(CategoryField field) {
+    final category = widget.category.name.toLowerCase();
+    final name = field.name.toLowerCase();
+    if (category == 'personal property' && name == 'vehicletype') {
+      return 'Property Type';
+    }
+    return field.label;
+  }
+
+  List<String>? _dropdownOptionsForField(CategoryField field) {
+    final category = widget.category.name.toLowerCase();
+    final name = field.name.toLowerCase();
+
+    if (name == 'accounttype' && category == 'banks') {
+      return const [
+        'Checking',
+        'Savings',
+        'Money Market',
+        'Certificate of Deposit (CD)',
+        'Business Checking',
+        'Joint Account',
+        'Other',
+      ];
+    }
+
+    if (name == 'accounttype' && category == 'retirement') {
+      return const [
+        '401(k)',
+        '403(b)',
+        'Traditional IRA',
+        'Roth IRA',
+        'Pension',
+        'SEP IRA',
+        'SIMPLE IRA',
+        'Other',
+      ];
+    }
+
+    if (name == 'investmenttype' && category == 'investments') {
+      return const [
+        'Stocks',
+        'Bonds',
+        'Mutual Funds',
+        'ETFs',
+        'Index Funds',
+        'Options',
+        'Cryptocurrency',
+        'Commodities',
+        'Other',
+      ];
+    }
+
+    if (name == 'propertytype' && category == 'real estate') {
+      return const [
+        'Primary Residence',
+        'Rental Property',
+        'Vacation Home',
+        'Commercial Property',
+        'Land',
+        'Condo',
+        'Townhouse',
+        'Other',
+      ];
+    }
+
+    if (name == 'vehicletype' && category == 'personal property') {
+      return const [
+        'Car',
+        'Truck',
+        'SUV',
+        'Motorcycle',
+        'RV',
+        'Boat',
+        'Trailer',
+        'Bicycle',
+        'Jewelry',
+        'Art',
+        'Collectibles',
+        'Electronics',
+        'Furniture',
+        'Appliances',
+        'Tools',
+        'Musical Instruments',
+        'Sports Equipment',
+        'Other',
+      ];
+    }
+
+    return null;
+  }
+
+  Widget _dropdownField(CategoryField field, List<String> options) {
+    final controller = _ctrlMap[field.name]!;
+    final currentValue = controller.text.trim();
+    final normalizedOptions = <String>{...options};
+    if (currentValue.isNotEmpty && !normalizedOptions.contains(currentValue)) {
+      normalizedOptions.add(currentValue);
+    }
+
+    final items = normalizedOptions.toList();
+    final selectedValue = currentValue.isEmpty ? null : currentValue;
+    final label = _displayLabelForField(field);
+
+    return DropdownButtonFormField<String>(
+      value: selectedValue,
+      style: const TextStyle(color: AppTheme.textPrimary),
+      decoration: InputDecoration(
+        labelText: field.isRequired ? '$label *' : label,
+        filled: true,
+        fillColor: AppTheme.navyChip,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.dividerColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.dividerColor),
+        ),
+      ),
+      items: items
+          .map(
+            (value) => DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        controller.text = value ?? '';
+      },
+      validator: field.isRequired
+          ? (value) => (value == null || value.trim().isEmpty)
+              ? '$label is required'
+              : null
+          : null,
+    );
+  }
+
+  bool _isValueLikeField(CategoryField field) {
+    if (field.isValueField) return true;
+    final key = field.name.toLowerCase();
+    return key == 'balance' || key == 'currentbalance' || key == 'currentvalue';
   }
 
   Widget _textField({

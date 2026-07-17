@@ -67,7 +67,7 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vehicles'),
+        title: const Text('Personal Property'),
         backgroundColor: AppTheme.backgroundColor,
       ),
       body: _isLoading
@@ -84,14 +84,14 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No vehicles yet',
+                        'No personal property yet',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: AppTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tap + to add your first vehicle',
+                        'Tap + to add your first personal property entry',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -111,7 +111,7 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _navigateToForm(),
         icon: const Icon(Icons.add),
-        label: const Text('Add Vehicle'),
+        label: const Text('Add Personal Property'),
       ),
     );
   }
