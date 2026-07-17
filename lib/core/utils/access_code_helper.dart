@@ -7,9 +7,18 @@ class AccessCodeHelper {
   factory AccessCodeHelper() => _instance;
   AccessCodeHelper._internal();
 
+  static final RegExp _accessCodePattern = RegExp(r'^[A-Za-z0-9]{4,8}$');
   static const String _accessCodeKey = 'vault_access_code';
   static const String _securityQuestionsKey = 'vault_security_questions';
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+
+  String normalizeAccessCode(String code) {
+    return code.trim().toUpperCase();
+  }
+
+  bool isValidAccessCode(String code) {
+    return _accessCodePattern.hasMatch(normalizeAccessCode(code));
+  }
 
   Future<bool> hasAccessCode() async {
     final code = await _secureStorage.read(key: _accessCodeKey);
@@ -17,13 +26,16 @@ class AccessCodeHelper {
   }
 
   Future<void> saveAccessCode(String code) async {
-    await _secureStorage.write(key: _accessCodeKey, value: code);
+    await _secureStorage.write(
+      key: _accessCodeKey,
+      value: normalizeAccessCode(code),
+    );
   }
 
   Future<bool> verifyAccessCode(String code) async {
     final savedCode = await _secureStorage.read(key: _accessCodeKey);
     if (savedCode == null || savedCode.isEmpty) return false;
-    return savedCode == code;
+    return savedCode == normalizeAccessCode(code);
   }
 
   Future<bool> hasSecurityQuestions() async {
@@ -44,14 +56,11 @@ class AccessCodeHelper {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return const [];
 
-      return decoded
-          .whereType<Map>()
-          .map((item) {
-            final question = (item['question'] ?? '').toString();
-            final answer = (item['answer'] ?? '').toString();
-            return {'question': question, 'answer': answer};
-          })
-          .toList();
+      return decoded.whereType<Map>().map((item) {
+        final question = (item['question'] ?? '').toString();
+        final answer = (item['answer'] ?? '').toString();
+        return {'question': question, 'answer': answer};
+      }).toList();
     } catch (_) {
       return const [];
     }

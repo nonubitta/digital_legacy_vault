@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="digital_legacy_vault"
+        android:label="Digital Legacy"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -17,16 +17,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _appSettings = AppSettingsHelper();
   final _accessCodeHelper = AccessCodeHelper();
   final _vaultNameController = TextEditingController();
+  static final RegExp _accessCodePattern = RegExp(r'^[A-Za-z0-9]{4,8}$');
   List<Map<String, dynamic>> _currencies = [];
   bool _isSavingVaultName = false;
   bool _hasSecurityQuestions = false;
+  bool _showHomeAmounts = true;
   bool _isLoading = true;
+
+  String _normalizeAccessCode(String code) => code.trim().toUpperCase();
+
+  String? _validateAccessCode(String? value) {
+    final code = _normalizeAccessCode(value ?? '');
+    if (!_accessCodePattern.hasMatch(code)) {
+      return 'Enter 4 to 8 letters or numbers.';
+    }
+    return null;
+  }
 
   @override
   void initState() {
     super.initState();
     _loadCurrencies();
     _loadVaultName();
+    _loadShowHomeAmounts();
     _loadSecurityQuestionsStatus();
   }
 
@@ -57,12 +70,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _hasSecurityQuestions = hasQuestions);
   }
 
+  Future<void> _loadShowHomeAmounts() async {
+    final showHomeAmounts = await _appSettings.getShowHomeAmounts();
+    if (!mounted) return;
+    setState(() => _showHomeAmounts = showHomeAmounts);
+  }
+
   Future<void> _saveVaultName() async {
     final name = _vaultNameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name cannot be empty.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Name cannot be empty.')));
       return;
     }
 
@@ -70,9 +89,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await _appSettings.saveVaultName(name);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vault name updated.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Vault name updated.')));
     } finally {
       if (mounted) {
         setState(() => _isSavingVaultName = false);
@@ -82,8 +101,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _showCurrencyDialog({Map<String, dynamic>? currency}) async {
     final isEdit = currency != null;
-    final codeController = TextEditingController(text: isEdit ? currency['code'].toString() : '');
-    final nameController = TextEditingController(text: isEdit ? currency['name'].toString() : '');
+    final codeController = TextEditingController(
+      text: isEdit ? currency['code'].toString() : '',
+    );
+    final nameController = TextEditingController(
+      text: isEdit ? currency['name'].toString() : '',
+    );
     final rateController = TextEditingController(
       text: isEdit ? (currency['rateToUsd'] as num).toString() : '',
     );
@@ -138,7 +161,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: rateController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'Currency Units per 1 USD *',
                     hintText: 'e.g., 83 for INR, 0.92 for EUR',
@@ -168,7 +193,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final code = codeController.text.trim().toUpperCase();
                 final name = nameController.text.trim();
                 final rate = double.parse(rateController.text.trim());
-                await _dbHelper.upsertCurrency(code: code, name: name, rateToUsd: rate);
+                await _dbHelper.upsertCurrency(
+                  code: code,
+                  name: name,
+                  rateToUsd: rate,
+                );
                 if (mounted) {
                   Navigator.pop(context, true);
                 }
@@ -184,7 +213,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _loadCurrencies();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEdit ? 'Currency updated' : 'Currency added')),
+          SnackBar(
+            content: Text(isEdit ? 'Currency updated' : 'Currency added'),
+          ),
         );
       }
     }
@@ -219,9 +250,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _dbHelper.deleteCurrency(code);
       await _loadCurrencies();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Currency deleted')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Currency deleted')));
       }
     }
   }
@@ -276,7 +307,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (!context.mounted) return;
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Backup JSON copied to clipboard.')),
+                  const SnackBar(
+                    content: Text('Backup JSON copied to clipboard.'),
+                  ),
                 );
               },
               icon: const Icon(Icons.copy_all_outlined),
@@ -287,9 +320,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
     }
   }
 
@@ -360,9 +393,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Import failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
     }
   }
 
@@ -371,7 +404,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!hasCode) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No security code is set yet. Please set one from the sign-in screen.')),
+        const SnackBar(
+          content: Text(
+            'No security code is set yet. Please set one from the sign-in screen.',
+          ),
+        ),
       );
       return;
     }
@@ -391,9 +428,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               TextFormField(
                 controller: currentController,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.visiblePassword,
                 obscureText: true,
                 maxLength: 8,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Current code',
                   hintText: 'Enter current code',
@@ -401,26 +441,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 validator: (value) {
                   final code = (value ?? '').trim();
                   if (code.isEmpty) return 'Current code is required.';
-                  return null;
+                  return _validateAccessCode(value);
                 },
               ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: newController,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.visiblePassword,
                 obscureText: true,
                 maxLength: 8,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'New code',
-                  hintText: '4 to 8 digits',
+                  hintText: '4 to 8 letters or numbers',
                 ),
                 validator: (value) {
-                  final code = (value ?? '').trim();
-                  final validPattern = RegExp(r'^\d{4,8}$');
-                  if (!validPattern.hasMatch(code)) {
-                    return 'Enter 4 to 8 digits.';
-                  }
-                  if (code == currentController.text.trim()) {
+                  final normalized = _normalizeAccessCode(value ?? '');
+                  final validationError = _validateAccessCode(value);
+                  if (validationError != null) return validationError;
+                  if (normalized ==
+                      _normalizeAccessCode(currentController.text)) {
                     return 'New code must be different.';
                   }
                   return null;
@@ -437,8 +479,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           FilledButton(
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
-              final isCurrentValid =
-                  await _accessCodeHelper.verifyAccessCode(currentController.text.trim());
+              final isCurrentValid = await _accessCodeHelper.verifyAccessCode(
+                _normalizeAccessCode(currentController.text),
+              );
               if (!isCurrentValid) {
                 if (!dialogContext.mounted) return;
                 ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -452,7 +495,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
                 return;
               }
-              await _accessCodeHelper.saveAccessCode(newController.text.trim());
+              await _accessCodeHelper.saveAccessCode(
+                _normalizeAccessCode(newController.text),
+              );
               if (!dialogContext.mounted) return;
               Navigator.pop(dialogContext, true);
             },
@@ -463,9 +508,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (updated == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Security code updated.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Security code updated.')));
     }
   }
 
@@ -475,7 +520,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final questionControllers = List<TextEditingController>.generate(
       5,
       (index) => TextEditingController(
-        text: index < existing.length ? (existing[index]['question'] ?? '') : '',
+        text: index < existing.length
+            ? (existing[index]['question'] ?? '')
+            : '',
       ),
     );
     final answerControllers = List<TextEditingController>.generate(
@@ -489,7 +536,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(_hasSecurityQuestions ? 'Update Security Questions' : 'Add Security Questions'),
+        title: Text(
+          _hasSecurityQuestions
+              ? 'Update Security Questions'
+              : 'Add Security Questions',
+        ),
         content: SizedBox(
           width: 700,
           child: Form(
@@ -592,9 +643,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -683,7 +732,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             final currency = _currencies[i];
                             final code = currency['code'].toString();
                             final name = currency['name'].toString();
-                            final rate = (currency['rateToUsd'] as num).toDouble();
+                            final rate = (currency['rateToUsd'] as num)
+                                .toDouble();
 
                             return ListTile(
                               visualDensity: const VisualDensity(vertical: -1),
@@ -699,19 +749,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                               ),
                               title: Text(name),
-                              subtitle: Text('1 USD = ${rate.toStringAsFixed(4)} $code'),
+                              subtitle: Text(
+                                '1 USD = ${rate.toStringAsFixed(4)} $code',
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    onPressed: () => _showCurrencyDialog(currency: currency),
+                                    onPressed: () =>
+                                        _showCurrencyDialog(currency: currency),
                                     icon: const Icon(Icons.edit_outlined),
                                   ),
                                   IconButton(
-                                    onPressed: code == 'USD' ? null : () => _deleteCurrency(currency),
+                                    onPressed: code == 'USD'
+                                        ? null
+                                        : () => _deleteCurrency(currency),
                                     icon: Icon(
                                       Icons.delete_outline,
-                                      color: code == 'USD' ? Colors.grey : AppTheme.errorColor,
+                                      color: code == 'USD'
+                                          ? Colors.grey
+                                          : AppTheme.errorColor,
                                     ),
                                   ),
                                 ],
@@ -720,7 +777,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           },
                         ),
                         if (i < _currencies.length - 1)
-                          Divider(color: AppTheme.navyBorder.withOpacity(0.7), height: 1),
+                          Divider(
+                            color: AppTheme.navyBorder.withOpacity(0.7),
+                            height: 1,
+                          ),
                       ],
                     ],
                   ),
@@ -728,9 +788,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Security',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -746,13 +806,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       ListTile(
                         visualDensity: const VisualDensity(vertical: -1),
+                        leading: const Icon(Icons.visibility_outlined),
+                        title: const Text('Show home screen amounts'),
+                        subtitle: const Text(
+                          'Display the actual total instead of *****',
+                        ),
+                        trailing: Switch(
+                          value: _showHomeAmounts,
+                          onChanged: (value) async {
+                            setState(() => _showHomeAmounts = value);
+                            await _appSettings.saveShowHomeAmounts(value);
+                          },
+                        ),
+                      ),
+                      Divider(
+                        color: AppTheme.navyBorder.withOpacity(0.7),
+                        height: 1,
+                      ),
+                      ListTile(
+                        visualDensity: const VisualDensity(vertical: -1),
                         leading: const Icon(Icons.lock_reset_outlined),
                         title: const Text('Update Security Code'),
                         subtitle: const Text('Change login security code'),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: _showUpdateSecurityCodeDialog,
                       ),
-                      Divider(color: AppTheme.navyBorder.withOpacity(0.7), height: 1),
+                      Divider(
+                        color: AppTheme.navyBorder.withOpacity(0.7),
+                        height: 1,
+                      ),
                       ListTile(
                         visualDensity: const VisualDensity(vertical: -1),
                         leading: const Icon(Icons.quiz_outlined),
@@ -775,9 +857,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Data Backup',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -795,11 +877,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         visualDensity: const VisualDensity(vertical: -1),
                         leading: const Icon(Icons.download_rounded),
                         title: const Text('Export Data'),
-                        subtitle: const Text('Generate backup JSON for your vault'),
+                        subtitle: const Text(
+                          'Generate backup JSON for your vault',
+                        ),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: _exportData,
                       ),
-                      Divider(color: AppTheme.navyBorder.withOpacity(0.7), height: 1),
+                      Divider(
+                        color: AppTheme.navyBorder.withOpacity(0.7),
+                        height: 1,
+                      ),
                       ListTile(
                         visualDensity: const VisualDensity(vertical: -1),
                         leading: const Icon(Icons.upload_rounded),
@@ -814,9 +901,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'About',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 Card(
@@ -827,7 +914,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text('Developed by Gurmeet Singh Khalsa'),
                   ),
                 ),
-        
               ],
             ),
     );

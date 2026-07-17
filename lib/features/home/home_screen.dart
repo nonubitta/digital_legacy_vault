@@ -25,12 +25,18 @@ class _Navy {
 
 IconData _iconForName(String? name) {
   switch (name) {
-    case 'account_balance': return Icons.account_balance_rounded;
-    case 'savings':         return Icons.savings_rounded;
-    case 'trending_up':     return Icons.trending_up_rounded;
-    case 'home':            return Icons.home_rounded;
-    case 'directions_car':  return Icons.directions_car_rounded;
-    default:                return Icons.folder_rounded;
+    case 'account_balance':
+      return Icons.account_balance_rounded;
+    case 'savings':
+      return Icons.savings_rounded;
+    case 'trending_up':
+      return Icons.trending_up_rounded;
+    case 'home':
+      return Icons.home_rounded;
+    case 'directions_car':
+      return Icons.directions_car_rounded;
+    default:
+      return Icons.folder_rounded;
   }
 }
 
@@ -57,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, double> _categoryUsdTotals = {};
   Map<String, String> _categorySubtitlePreviews = {};
   String _vaultName = AppSettingsHelper.defaultVaultName;
+  bool _showHomeAmounts = true;
   bool _isLoading = true;
 
   @override
@@ -72,15 +79,18 @@ class _HomeScreenState extends State<HomeScreen> {
       _dbHelper.getCategoryCounts(),
       _dbHelper.getCategoryUsdTotals(),
       _appSettings.getVaultName(),
+      _appSettings.getShowHomeAmounts(),
     ]);
 
     final loadedCategories = results[0] as List<Category>;
     final systemCategoryPreviews = await Future.wait<MapEntry<String, String>>(
-      loadedCategories
-          .where((category) => category.isSystem)
-          .map((category) async {
+      loadedCategories.where((category) => category.isSystem).map((
+        category,
+      ) async {
         final assets = await _dbHelper.getAssetsByCategory(category.id);
-        final preview = _systemCategoryPreview(assets.map((asset) => asset.name).toList());
+        final preview = _systemCategoryPreview(
+          assets.map((asset) => asset.name).toList(),
+        );
         return MapEntry(category.name, preview);
       }),
     );
@@ -93,14 +103,15 @@ class _HomeScreenState extends State<HomeScreen> {
         for (final entry in systemCategoryPreviews) entry.key: entry.value,
       };
       _vaultName = results[3] as String;
+      _showHomeAmounts = results[4] as bool;
       _isLoading = false;
     });
   }
 
-  int    get _totalAssets => _categoryCounts.values.fold(0, (s, c) => s + c);
-  double get _totalUsd    => _categoryUsdTotals.values.fold(0.0, (s, v) => s + v);
-  int    _countFor(String n) => _categoryCounts[n] ?? 0;
-  double _usdFor(String n)   => _categoryUsdTotals[n] ?? 0;
+  int get _totalAssets => _categoryCounts.values.fold(0, (s, c) => s + c);
+  double get _totalUsd => _categoryUsdTotals.values.fold(0.0, (s, v) => s + v);
+  int _countFor(String n) => _categoryCounts[n] ?? 0;
+  double _usdFor(String n) => _categoryUsdTotals[n] ?? 0;
 
   String get _largestCategoryTitle {
     if (_categoryUsdTotals.isEmpty || _totalUsd <= 0) return '\u2014';
@@ -121,13 +132,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatUsdFull(double v) {
     final rounded = v.round();
-    final digits  = rounded.abs().toString();
+    final digits = rounded.abs().toString();
     final buf = StringBuffer();
     for (var i = 0; i < digits.length; i++) {
       if (i > 0 && (digits.length - i) % 3 == 0) buf.write(',');
       buf.write(digits[i]);
     }
     return '${rounded < 0 ? "-" : ""}\$$buf';
+  }
+
+  String _homeAmountDisplay() {
+    return _showHomeAmounts ? _formatUsdFull(_totalUsd) : '*****';
+  }
+
+  String _categoryAmountDisplay(double value) {
+    return _showHomeAmounts ? _formatUsd(value) : '*****';
   }
 
   String _systemCategoryPreview(List<String> names) {
@@ -139,22 +158,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openCategory(Category cat) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => AssetListScreen(category: cat)),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => AssetListScreen(category: cat)));
     _reload();
   }
 
   void _openSettings() async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     _reload();
   }
 
   void _openManageCategories() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ManageCategoryScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ManageCategoryScreen()));
     _reload();
   }
 
@@ -174,7 +194,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.all(64),
-                      child: Center(child: CircularProgressIndicator(color: _Navy.blue)),
+                      child: Center(
+                        child: CircularProgressIndicator(color: _Navy.blue),
+                      ),
                     ),
                   )
                 : SliverPadding(
@@ -193,23 +215,41 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           Container(
-            width: 32, height: 32,
+            width: 32,
+            height: 32,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _Navy.chip, borderRadius: BorderRadius.circular(9)),
-            child: const Icon(Icons.shield_rounded, color: _Navy.text, size: 15),
+              color: _Navy.chip,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: const Icon(
+              Icons.shield_rounded,
+              color: _Navy.text,
+              size: 15,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(_vaultName,
-                style: GoogleFonts.inter(
-                    color: _Navy.text, fontSize: 15, fontWeight: FontWeight.w700)),
+            child: Text(
+              _vaultName,
+              style: GoogleFonts.inter(
+                color: _Navy.text,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
           IconButton(
             onPressed: _openSettings,
             style: IconButton.styleFrom(
-                backgroundColor: _Navy.chip, shape: const CircleBorder()),
-            icon: const Icon(Icons.settings_rounded, color: _Navy.text, size: 18),
+              backgroundColor: _Navy.chip,
+              shape: const CircleBorder(),
+            ),
+            icon: const Icon(
+              Icons.settings_rounded,
+              color: _Navy.text,
+              size: 18,
+            ),
             tooltip: 'Settings',
           ),
         ],
@@ -223,12 +263,19 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Overview',
-              style: GoogleFonts.inter(color: _Navy.textDim, fontSize: 13)),
+          Text(
+            'Overview',
+            style: GoogleFonts.inter(color: _Navy.textDim, fontSize: 13),
+          ),
           const SizedBox(height: 2),
-          Text('Your holdings',
-              style: GoogleFonts.inter(
-                  color: _Navy.text, fontSize: 20, fontWeight: FontWeight.w700)),
+          Text(
+            'Your holdings',
+            style: GoogleFonts.inter(
+              color: _Navy.text,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -253,23 +300,27 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                Text('TOTAL ASSETS TRACKED',
-                    style: GoogleFonts.inter(
-                        color: Colors.white.withOpacity(0.55),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.3)),
+                Text(
+                  'TOTAL ASSETS TRACKED',
+                  style: GoogleFonts.inter(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              _isLoading ? '\u2013' : _formatUsdFull(_totalUsd),
+              _isLoading ? '\u2013' : _homeAmountDisplay(),
               style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                  height: 1),
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                height: 1,
+              ),
             ),
             const SizedBox(height: 8),
             Align(
@@ -280,11 +331,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: _Navy.positive.withOpacity(0.14),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('${_categories.length} categories \u00b7 $_totalAssets items',
-                    style: GoogleFonts.inter(
-                        color: _Navy.positive,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600)),
+                child: Text(
+                  '${_categories.length} categories \u00b7 $_totalAssets items',
+                  style: GoogleFonts.inter(
+                    color: _Navy.positive,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -298,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSplitBar() {
     if (_categories.isEmpty) return const SizedBox.shrink();
     final values = _categories.map((c) => _usdFor(c.name)).toList();
-    final total  = values.fold(0.0, (a, b) => a + b);
+    final total = values.fold(0.0, (a, b) => a + b);
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
       child: SizedBox(
@@ -323,19 +377,25 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
       child: Row(
         children: [
-          Text('Categories',
-              style: GoogleFonts.inter(
-                  color: _Navy.text,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700)),
+          Text(
+            'Categories',
+            style: GoogleFonts.inter(
+              color: _Navy.text,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const Spacer(),
           GestureDetector(
             onTap: _openManageCategories,
-            child: Text('Manage',
-                style: GoogleFonts.inter(
-                    color: _Navy.blue,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600)),
+            child: Text(
+              'Manage',
+              style: GoogleFonts.inter(
+                color: _Navy.blue,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -347,34 +407,38 @@ class _HomeScreenState extends State<HomeScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text('No categories yet',
-              style: GoogleFonts.inter(color: _Navy.textDim)),
+          child: Text(
+            'No categories yet',
+            style: GoogleFonts.inter(color: _Navy.textDim),
+          ),
         ),
       );
     }
     final rows = <Widget>[];
     for (var i = 0; i < _categories.length; i += 2) {
       final isLast = i + 1 >= _categories.length;
-      rows.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _buildCard(_categories[i], i, wide: isLast)),
-          if (!isLast) ...[
-            const SizedBox(width: 10),
-            Expanded(child: _buildCard(_categories[i + 1], i + 1)),
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: _buildCard(_categories[i], i, wide: isLast)),
+            if (!isLast) ...[
+              const SizedBox(width: 10),
+              Expanded(child: _buildCard(_categories[i + 1], i + 1)),
+            ],
           ],
-        ],
-      ));
+        ),
+      );
       if (i + 2 < _categories.length) rows.add(const SizedBox(height: 10));
     }
     return Column(children: rows);
   }
 
   Widget _buildCard(Category cat, int index, {bool wide = false}) {
-    final count    = _countFor(cat.name);
-    final usdLabel = _formatUsd(_usdFor(cat.name));
-    final color    = _colorFor(cat, index);
-    final icon     = _iconForName(cat.icon);
+    final count = _countFor(cat.name);
+    final usdLabel = _categoryAmountDisplay(_usdFor(cat.name));
+    final color = _colorFor(cat, index);
+    final icon = _iconForName(cat.icon);
     final subtitle = cat.isSystem
         ? (_categorySubtitlePreviews[cat.name] ?? 'No items added')
         : (cat.description ?? '');
@@ -398,40 +462,56 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: const EdgeInsets.all(10),
                 child: wide
-                    ? Row(children: [
-                        _iconBadge(icon, color),
-                        const SizedBox(width: 10),
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(cat.name,
-                                style: GoogleFonts.inter(
+                    ? Row(
+                        children: [
+                          _iconBadge(icon, color),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  cat.name,
+                                  style: GoogleFonts.inter(
                                     color: _Navy.text,
-                                fontSize: 14,
-                                    fontWeight: FontWeight.w600)),
-                            Text(
-                              subtitle,
-                              style: GoogleFonts.inter(
-                                  color: _Navy.textDim, fontSize: 10),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  subtitle,
+                                  style: GoogleFonts.inter(
+                                    color: _Navy.textDim,
+                                    fontSize: 10,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                          ],
-                        )),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(usdLabel,
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                usdLabel,
                                 style: GoogleFonts.inter(
-                                    color: _Navy.text,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700)),
-                            Text('$count ${count == 1 ? "item" : "items"}',
+                                  color: _Navy.text,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                '$count ${count == 1 ? "item" : "items"}',
                                 style: GoogleFonts.inter(
-                                    color: _Navy.textDim, fontSize: 9.5)),
-                          ],
-                        ),
-                      ])
+                                  color: _Navy.textDim,
+                                  fontSize: 9.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -457,20 +537,29 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             subtitle,
                             style: GoogleFonts.inter(
-                                color: _Navy.textDim, fontSize: 10),
+                              color: _Navy.textDim,
+                              fontSize: 10,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 7),
-                          Text(usdLabel,
-                              style: GoogleFonts.inter(
-                                  color: _Navy.text,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700)),
+                          Text(
+                            usdLabel,
+                            style: GoogleFonts.inter(
+                              color: _Navy.text,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           const SizedBox(height: 0),
-                          Text('$count ${count == 1 ? "item" : "items"}',
-                              style: GoogleFonts.inter(
-                                  color: _Navy.textDim, fontSize: 9.5)),
+                          Text(
+                            '$count ${count == 1 ? "item" : "items"}',
+                            style: GoogleFonts.inter(
+                              color: _Navy.textDim,
+                              fontSize: 9.5,
+                            ),
+                          ),
                         ],
                       ),
               ),
@@ -483,7 +572,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _iconBadge(IconData icon, Color color) {
     return Container(
-      width: 30, height: 30,
+      width: 30,
+      height: 30,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: color.withOpacity(0.16),

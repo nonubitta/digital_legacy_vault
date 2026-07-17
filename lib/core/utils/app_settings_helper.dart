@@ -6,6 +6,8 @@ class AppSettingsHelper {
   AppSettingsHelper._internal();
 
   static const String _vaultNameKey = 'vault_name';
+  static const String _showHomeAmountsKey = 'show_home_amounts';
+  static const String _disclaimerAcceptedKey = 'disclaimer_accepted';
   static const String defaultVaultName = 'Legacy Vault';
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -25,5 +27,32 @@ class AppSettingsHelper {
       return;
     }
     await _secureStorage.write(key: _vaultNameKey, value: normalized);
+  }
+
+  Future<bool> getShowHomeAmounts() async {
+    final saved = await _secureStorage.read(key: _showHomeAmountsKey);
+    if (saved == null || saved.trim().isEmpty) {
+      return true;
+    }
+    return saved == 'true';
+  }
+
+  Future<void> saveShowHomeAmounts(bool value) async {
+    await _secureStorage.write(
+      key: _showHomeAmountsKey,
+      value: value.toString(),
+    );
+  }
+
+  Future<bool> hasAcceptedDisclaimer() async {
+    final saved = await _secureStorage.read(key: _disclaimerAcceptedKey);
+    return saved == 'true';
+  }
+
+  Future<void> saveDisclaimerAccepted(bool accepted) async {
+    await _secureStorage.write(
+      key: _disclaimerAcceptedKey,
+      value: accepted.toString(),
+    );
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/utils/access_code_helper.dart';
 import '../../core/utils/biometric_helper.dart';
 import '../home/home_screen.dart';
@@ -17,11 +19,39 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _hasAccessCode = false;
   String _errorMessage = '';
 
+  static final RegExp _accessCodePattern = RegExp(r'^[A-Za-z0-9]{4,8}$');
+
+  String _normalizeAccessCode(String code) => code.trim().toUpperCase();
+
+  String? _validateAccessCode(String? value) {
+    final code = _normalizeAccessCode(value ?? '');
+    if (!_accessCodePattern.hasMatch(code)) {
+      return 'Enter 4 to 8 letters or numbers.';
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadAccessCodeStatus();
-    _authenticate();
+    _initializeAuthFlow();
+  }
+
+  Future<void> _initializeAuthFlow() async {
+    await _loadAccessCodeStatus();
+    if (!mounted) return;
+
+    if (AppConstants.enableBiometricAuth) {
+      _authenticate();
+      return;
+    }
+
+    setState(() {
+      _isAuthenticating = false;
+      _errorMessage = _hasAccessCode
+          ? 'Use access code to continue.'
+          : 'Set an access code to continue.';
+    });
   }
 
   Future<void> _loadAccessCodeStatus() async {
@@ -31,6 +61,16 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _authenticate() async {
+    if (!AppConstants.enableBiometricAuth) {
+      setState(() {
+        _isAuthenticating = false;
+        _errorMessage = _hasAccessCode
+            ? 'Use access code to continue.'
+            : 'Set an access code to continue.';
+      });
+      return;
+    }
+
     setState(() {
       _isAuthenticating = true;
       _errorMessage = '';
@@ -72,21 +112,17 @@ class _AuthScreenState extends State<AuthScreen> {
             key: formKey,
             child: TextFormField(
               controller: codeController,
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.visiblePassword,
               obscureText: true,
               maxLength: 8,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Access code',
-                hintText: '4 to 8 digits',
+                hintText: '4 to 8 letters or numbers',
               ),
-              validator: (value) {
-                final code = (value ?? '').trim();
-                final validPattern = RegExp(r'^\d{4,8}$');
-                if (!validPattern.hasMatch(code)) {
-                  return 'Enter 4 to 8 digits.';
-                }
-                return null;
-              },
+              validator: _validateAccessCode,
             ),
           ),
           actions: [
@@ -98,7 +134,7 @@ class _AuthScreenState extends State<AuthScreen> {
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
                 final isValid = await _accessCodeHelper.verifyAccessCode(
-                  codeController.text.trim(),
+                  _normalizeAccessCode(codeController.text),
                 );
                 if (!dialogContext.mounted) return;
                 if (!isValid) {
@@ -138,35 +174,35 @@ class _AuthScreenState extends State<AuthScreen> {
               children: [
                 TextFormField(
                   controller: codeController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.visiblePassword,
                   obscureText: true,
                   maxLength: 8,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                  ],
                   decoration: const InputDecoration(
                     labelText: 'New access code',
-                    hintText: '4 to 8 digits',
+                    hintText: '4 to 8 letters or numbers',
                   ),
-                  validator: (value) {
-                    final code = (value ?? '').trim();
-                    final validPattern = RegExp(r'^\d{4,8}$');
-                    if (!validPattern.hasMatch(code)) {
-                      return 'Enter 4 to 8 digits.';
-                    }
-                    return null;
-                  },
+                  validator: _validateAccessCode,
                 ),
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: confirmController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.visiblePassword,
                   obscureText: true,
                   maxLength: 8,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                  ],
                   decoration: const InputDecoration(
                     labelText: 'Confirm access code',
                     hintText: 'Re-enter code',
                   ),
                   validator: (value) {
-                    final confirm = (value ?? '').trim();
-                    if (confirm != codeController.text.trim()) {
+                    final confirm = _normalizeAccessCode(value ?? '');
+                    final newCode = _normalizeAccessCode(codeController.text);
+                    if (confirm != newCode) {
                       return 'Codes do not match.';
                     }
                     return null;
@@ -183,7 +219,9 @@ class _AuthScreenState extends State<AuthScreen> {
             FilledButton(
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
-                await _accessCodeHelper.saveAccessCode(codeController.text.trim());
+                await _accessCodeHelper.saveAccessCode(
+                  _normalizeAccessCode(codeController.text),
+                );
                 if (!dialogContext.mounted) return;
                 Navigator.pop(dialogContext, true);
               },
@@ -198,15 +236,17 @@ class _AuthScreenState extends State<AuthScreen> {
       await _loadAccessCodeStatus();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Access code saved. You can use it to unlock.')),
+        const SnackBar(
+          content: Text('Access code saved. You can use it to unlock.'),
+        ),
       );
     }
   }
 
   void _navigateToHome() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
   }
 
   @override
@@ -259,7 +299,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 48),
-                  
+
                   // App Name
                   Text(
                     'Legacy Vault',
@@ -279,7 +319,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   Text(
                     'Secure your digital legacy',
                     textAlign: TextAlign.center,
@@ -290,7 +330,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 80),
-                  
+
                   // Authentication Status
                   if (_isAuthenticating)
                     Column(
@@ -305,7 +345,9 @@ class _AuthScreenState extends State<AuthScreen> {
                             width: 32,
                             height: 32,
                             child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                               strokeWidth: 3,
                             ),
                           ),
@@ -322,7 +364,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ],
                     ),
-                  
+
                   // Error Message
                   if (_errorMessage.isNotEmpty)
                     Column(
@@ -356,35 +398,45 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: _authenticate,
-                          icon: const Icon(Icons.refresh_rounded),
-                          label: const Text('Try Again'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF667EEA),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
+                        if (AppConstants.enableBiometricAuth)
+                          ElevatedButton.icon(
+                            onPressed: _authenticate,
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('Try Again'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF667EEA),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 0,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
                           ),
-                        ),
-                        const SizedBox(height: 10),
+                        if (AppConstants.enableBiometricAuth)
+                          const SizedBox(height: 10),
                         OutlinedButton.icon(
-                          onPressed: _hasAccessCode ? _promptAccessCode : _promptSetAccessCode,
+                          onPressed: _hasAccessCode
+                              ? _promptAccessCode
+                              : _promptSetAccessCode,
                           icon: Icon(
-                            _hasAccessCode ? Icons.pin_outlined : Icons.add_moderator_outlined,
+                            _hasAccessCode
+                                ? Icons.pin_outlined
+                                : Icons.add_moderator_outlined,
                           ),
                           label: Text(
-                            _hasAccessCode ? 'Use Access Code' : 'Set Access Code',
+                            _hasAccessCode
+                                ? 'Use Access Code'
+                                : 'Set Access Code',
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: BorderSide(color: Colors.white.withOpacity(0.65)),
+                            side: BorderSide(
+                              color: Colors.white.withOpacity(0.65),
+                            ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
                               vertical: 14,
