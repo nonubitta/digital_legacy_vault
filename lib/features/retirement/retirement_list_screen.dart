@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/retirement_account.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_display_helper.dart';
 import 'retirement_form_screen.dart';
 
 class RetirementListScreen extends StatefulWidget {
@@ -118,6 +119,7 @@ class _RetirementListScreenState extends State<RetirementListScreen> {
   Widget _buildAccountCard(RetirementAccount account) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: AppTheme.surfaceColor,
       child: InkWell(
         onTap: () => _navigateToForm(account: account),
         borderRadius: BorderRadius.circular(16),
@@ -147,11 +149,16 @@ class _RetirementListScreenState extends State<RetirementListScreen> {
                       children: [
                         Text(
                           account.name,
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         Text(
                           account.provider,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -192,7 +199,7 @@ class _RetirementListScreenState extends State<RetirementListScreen> {
               const SizedBox(height: 12),
               _buildInfoRow('Type', account.accountType),
               if (account.currentBalance != null)
-                _buildInfoRow('Balance', '${account.currencyCode} ${account.currentBalance!.toStringAsFixed(2)}'),
+                _buildInfoRow('Balance', formatCurrencyAmount(account.currencyCode, account.currentBalance!)),
               if (account.employerName != null)
                 _buildInfoRow('Employer', account.employerName!),
             ],
@@ -216,10 +223,7 @@ class _RetirementListScreenState extends State<RetirementListScreen> {
           ),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
           ),
         ],
       ),

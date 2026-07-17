@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/investment.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_display_helper.dart';
 import 'investment_form_screen.dart';
 
 class InvestmentsListScreen extends StatefulWidget {
@@ -118,6 +119,7 @@ class _InvestmentsListScreenState extends State<InvestmentsListScreen> {
   Widget _buildInvestmentCard(Investment investment) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: AppTheme.surfaceColor,
       child: InkWell(
         onTap: () => _navigateToForm(investment: investment),
         borderRadius: BorderRadius.circular(16),
@@ -147,11 +149,16 @@ class _InvestmentsListScreenState extends State<InvestmentsListScreen> {
                       children: [
                         Text(
                           investment.name,
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         Text(
                           investment.provider,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -194,7 +201,7 @@ class _InvestmentsListScreenState extends State<InvestmentsListScreen> {
               if (investment.tickerSymbol != null)
                 _buildInfoRow('Symbol', investment.tickerSymbol!),
               if (investment.currentValue != null)
-                _buildInfoRow('Value', '${investment.currencyCode} ${investment.currentValue!.toStringAsFixed(2)}'),
+                _buildInfoRow('Value', formatCurrencyAmount(investment.currencyCode, investment.currentValue!)),
             ],
           ),
         ),
@@ -219,6 +226,7 @@ class _InvestmentsListScreenState extends State<InvestmentsListScreen> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
+              color: AppTheme.textPrimary,
             ),
           ),
         ],

@@ -36,6 +36,7 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
   late TextEditingController _notesController;
   List<Map<String, dynamic>> _currencies = [];
   String _selectedCurrencyCode = 'USD';
+  final Map<TextEditingController, bool> _obscureStates = {};
 
   bool _isLoading = false;
 
@@ -367,16 +368,29 @@ class _VehicleFormScreenState extends State<VehicleFormScreen> {
     TextInputType? keyboardType,
     int maxLines = 1,
   }) {
+    final isObscured = _obscureStates.putIfAbsent(controller, () => obscureText);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,
+        obscureText: isObscured,
         decoration: InputDecoration(
           labelText: label + (isRequired ? ' *' : ''),
           hintText: hint,
           prefixIcon: Icon(icon),
-          suffixIcon: obscureText 
-              ? Icon(Icons.visibility_off_outlined, color: AppTheme.textSecondary)
+          suffixIcon: obscureText
+              ? IconButton(
+                  tooltip: isObscured ? 'Show' : 'Hide',
+                  onPressed: () => setState(() {
+                    _obscureStates[controller] = !isObscured;
+                  }),
+                  icon: Icon(
+                    isObscured
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: AppTheme.textSecondary,
+                  ),
+                )
               : null,
         ),
         keyboardType: keyboardType,

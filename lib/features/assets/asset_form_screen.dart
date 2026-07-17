@@ -24,6 +24,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _notesCtrl;
   final Map<String, TextEditingController> _ctrlMap = {};
+  final Map<String, bool> _obscureStates = {};
 
   String _currencyCode = 'USD';
   List<Map<String, dynamic>> _currencies = [];
@@ -212,6 +213,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
           label: field.label,
           isRequired: field.isRequired,
           obscure: field.isSensitive,
+          obscureKey: field.name,
           keyboardType: field.fieldType == FieldType.number
               ? const TextInputType.numberWithOptions(decimal: true)
               : field.fieldType == FieldType.url
@@ -219,9 +221,6 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                   : TextInputType.text,
           inputFormatters: field.fieldType == FieldType.number
               ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
-              : null,
-          suffixIcon: field.isSensitive
-              ? _ObscureToggle(controller: _ctrlMap[field.name]!)
               : null,
         );
     }
@@ -233,23 +232,41 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     String? hint,
     bool isRequired = false,
     bool obscure = false,
+    String? obscureKey,
     int maxLines = 1,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
-    Widget? suffixIcon,
   }) {
+    final effectiveKey = obscureKey ?? controller.hashCode.toString();
+    final isObscured = _obscureStates.putIfAbsent(effectiveKey, () => obscure);
+
     return TextFormField(
       controller: controller,
-      obscureText: obscure,
+      style: const TextStyle(color: AppTheme.textPrimary),
+      obscureText: isObscured,
       maxLines: maxLines,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: isRequired ? '$label *' : label,
         hintText: hint,
-        suffixIcon: suffixIcon,
+        suffixIcon: obscure
+            ? IconButton(
+                tooltip: isObscured ? 'Show' : 'Hide',
+                onPressed: () => setState(() {
+                  _obscureStates[effectiveKey] = !isObscured;
+                }),
+                icon: Icon(
+                  isObscured
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 20,
+                  color: AppTheme.textSecondary,
+                ),
+              )
+            : null,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppTheme.navyChip,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppTheme.dividerColor),
@@ -271,11 +288,12 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       child: AbsorbPointer(
         child: TextFormField(
           controller: _ctrlMap[field.name],
+          style: const TextStyle(color: AppTheme.textPrimary),
           decoration: InputDecoration(
             labelText: field.isRequired ? '${field.label} *' : field.label,
             suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: AppTheme.navyChip,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: AppTheme.dividerColor),
@@ -297,13 +315,15 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     final ctrl = _ctrlMap[field.name]!;
     return StatefulBuilder(
       builder: (_, setSub) => SwitchListTile(
-        title: Text(field.label),
+        title: Text(field.label, style: const TextStyle(color: AppTheme.textPrimary)),
         value: ctrl.text == 'true',
         onChanged: (v) {
           ctrl.text = v ? 'true' : 'false';
           setSub(() {});
         },
-        tileColor: Colors.white,
+        activeColor: AppTheme.primaryColor,
+        inactiveThumbColor: AppTheme.textSecondary,
+        tileColor: AppTheme.navyChip,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: const BorderSide(color: AppTheme.dividerColor),
@@ -316,10 +336,11 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     if (_currencies.isEmpty) return const SizedBox.shrink();
     return DropdownButtonFormField<String>(
       value: _currencyCode,
+      style: const TextStyle(color: AppTheme.textPrimary),
       decoration: InputDecoration(
         labelText: 'Currency',
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppTheme.navyChip,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppTheme.dividerColor),
@@ -336,40 +357,6 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
               ))
           .toList(),
       onChanged: (v) => setState(() => _currencyCode = v ?? 'USD'),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────
-// Helper: toggle obscure visibility
-// ──────────────────────────────────────────────────────────────
-
-class _ObscureToggle extends StatefulWidget {
-  final TextEditingController controller;
-  const _ObscureToggle({required this.controller});
-
-  @override
-  State<_ObscureToggle> createState() => _ObscureToggleState();
-}
-
-class _ObscureToggleState extends State<_ObscureToggle> {
-  bool _visible = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(
-        _visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-        size: 20,
-        color: AppTheme.textSecondary,
-      ),
-      onPressed: () {
-        setState(() => _visible = !_visible);
-        // Rebuild parent to pass new obscureText value
-        // The parent _AssetFormScreenState rebuilds via _buildFieldInput rebuild on setState
-        (context.findAncestorStateOfType<_AssetFormScreenState>())
-            ?.setState(() {});
-      },
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/encryption_helper.dart';
 import 'features/auth/auth_screen.dart';
+import 'features/home/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +31,8 @@ class MyApp extends StatelessWidget {
       title: 'Digital Legacy Vault',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const AuthScreen(),
+      home: const HomeScreen(), 
     );
   }
 }
+// const AuthScreen(),

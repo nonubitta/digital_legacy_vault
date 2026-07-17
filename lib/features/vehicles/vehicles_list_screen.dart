@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/vehicle.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_display_helper.dart';
 import 'vehicle_form_screen.dart';
 
 class VehiclesListScreen extends StatefulWidget {
@@ -118,6 +119,7 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
   Widget _buildVehicleCard(Vehicle vehicle) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: AppTheme.surfaceColor,
       child: InkWell(
         onTap: () => _navigateToForm(vehicle: vehicle),
         borderRadius: BorderRadius.circular(16),
@@ -147,11 +149,16 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
                       children: [
                         Text(
                           vehicle.name,
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         Text(
                           '${vehicle.year} ${vehicle.make} ${vehicle.model}',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -194,7 +201,7 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
               if (vehicle.licensePlate != null)
                 _buildInfoRow('License', vehicle.licensePlate!),
               if (vehicle.currentValue != null)
-                _buildInfoRow('Value', '${vehicle.currencyCode} ${vehicle.currentValue!.toStringAsFixed(2)}'),
+                _buildInfoRow('Value', formatCurrencyAmount(vehicle.currencyCode, vehicle.currentValue!)),
             ],
           ),
         ),
@@ -216,10 +223,7 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
           ),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
           ),
         ],
       ),

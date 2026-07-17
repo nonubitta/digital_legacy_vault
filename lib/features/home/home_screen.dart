@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_settings_helper.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/category.dart';
 import '../assets/asset_list_screen.dart';
@@ -50,9 +51,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _dbHelper = DatabaseHelper();
+  final _appSettings = AppSettingsHelper();
   List<Category> _categories = [];
   Map<String, int> _categoryCounts = {};
   Map<String, double> _categoryUsdTotals = {};
+  Map<String, String> _categorySubtitlePreviews = {};
+  String _vaultName = AppSettingsHelper.defaultVaultName;
   bool _isLoading = true;
 
   @override
@@ -67,11 +71,28 @@ class _HomeScreenState extends State<HomeScreen> {
       _dbHelper.getCategories(),
       _dbHelper.getCategoryCounts(),
       _dbHelper.getCategoryUsdTotals(),
+      _appSettings.getVaultName(),
     ]);
+
+    final loadedCategories = results[0] as List<Category>;
+    final systemCategoryPreviews = await Future.wait<MapEntry<String, String>>(
+      loadedCategories
+          .where((category) => category.isSystem)
+          .map((category) async {
+        final assets = await _dbHelper.getAssetsByCategory(category.id);
+        final preview = _systemCategoryPreview(assets.map((asset) => asset.name).toList());
+        return MapEntry(category.name, preview);
+      }),
+    );
+
     setState(() {
-      _categories        = results[0] as List<Category>;
-      _categoryCounts    = results[1] as Map<String, int>;
+      _categories = loadedCategories;
+      _categoryCounts = results[1] as Map<String, int>;
       _categoryUsdTotals = results[2] as Map<String, double>;
+      _categorySubtitlePreviews = {
+        for (final entry in systemCategoryPreviews) entry.key: entry.value,
+      };
+      _vaultName = results[3] as String;
       _isLoading = false;
     });
   }
@@ -107,6 +128,14 @@ class _HomeScreenState extends State<HomeScreen> {
       buf.write(digits[i]);
     }
     return '${rounded < 0 ? "-" : ""}\$$buf';
+  }
+
+  String _systemCategoryPreview(List<String> names) {
+    final nonEmpty = names.where((name) => name.trim().isNotEmpty).toList();
+    if (nonEmpty.isEmpty) return 'No items added';
+    if (nonEmpty.length == 1) return nonEmpty.first;
+    if (nonEmpty.length == 2) return nonEmpty.join(', ');
+    return '${nonEmpty.take(2).join(', ')}, ...';
   }
 
   void _openCategory(Category cat) async {
@@ -160,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
       child: Row(
         children: [
           Container(
@@ -172,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text('Legacy Vault',
+            child: Text(_vaultName,
                 style: GoogleFonts.inter(
                     color: _Navy.text, fontSize: 15, fontWeight: FontWeight.w700)),
           ),
@@ -346,6 +375,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final usdLabel = _formatUsd(_usdFor(cat.name));
     final color    = _colorFor(cat, index);
     final icon     = _iconForName(cat.icon);
+    final subtitle = cat.isSystem
+        ? (_categorySubtitlePreviews[cat.name] ?? 'No items added')
+        : (cat.description ?? '');
 
     return Material(
       color: Colors.transparent,
@@ -377,12 +409,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                     color: _Navy.text,
                                 fontSize: 14,
                                     fontWeight: FontWeight.w600)),
-                            if (cat.description != null)
-                              Text(cat.description!,
-                                  style: GoogleFonts.inter(
-                                      color: _Navy.textDim, fontSize: 10),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
+                            Text(
+                              subtitle,
+                              style: GoogleFonts.inter(
+                                  color: _Navy.textDim, fontSize: 10),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ],
                         )),
                         Column(
@@ -421,12 +454,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                           const SizedBox(height: 3),
-                          if (cat.description != null)
-                            Text(cat.description!,
-                                style: GoogleFonts.inter(
-                                    color: _Navy.textDim, fontSize: 10),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
+                          Text(
+                            subtitle,
+                            style: GoogleFonts.inter(
+                                color: _Navy.textDim, fontSize: 10),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           const SizedBox(height: 7),
                           Text(usdLabel,
                               style: GoogleFonts.inter(

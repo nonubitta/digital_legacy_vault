@@ -4,6 +4,7 @@ import '../../data/models/asset.dart';
 import '../../data/models/category.dart';
 import '../../data/models/category_field.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_display_helper.dart';
 import 'asset_form_screen.dart';
 
 class AssetListScreen extends StatefulWidget {
@@ -52,9 +53,9 @@ class _AssetListScreenState extends State<AssetListScreen> {
     final v = asset.numericValue(vf.name);
     if (v == null) return '';
     final currency = asset.currencyCode;
-    if (v >= 1000000) return '$currency ${(v / 1000000).toStringAsFixed(2)}M';
-    if (v >= 1000) return '$currency ${(v / 1000).toStringAsFixed(1)}K';
-    return '$currency ${v.toStringAsFixed(2)}';
+    if (v >= 1000000) return '${displayCurrencyLabel(currency)} ${(v / 1000000).toStringAsFixed(2)}M';
+    if (v >= 1000) return '${displayCurrencyLabel(currency)} ${(v / 1000).toStringAsFixed(1)}K';
+    return formatCurrencyAmount(currency, v);
   }
 
   Future<void> _confirmDelete(Asset asset) async {
@@ -179,7 +180,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.dividerColor),
         boxShadow: const [
@@ -215,7 +216,7 @@ class _AssetListScreenState extends State<AssetListScreen> {
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                          ?.copyWith(fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                     ),
                     if (subtitle != null && subtitle.isNotEmpty) ...[
                       const SizedBox(height: 2),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/property.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_display_helper.dart';
 import 'property_form_screen.dart';
 
 class PropertiesListScreen extends StatefulWidget {
@@ -118,6 +119,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
   Widget _buildPropertyCard(Property property) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: AppTheme.surfaceColor,
       child: InkWell(
         onTap: () => _navigateToForm(property: property),
         borderRadius: BorderRadius.circular(16),
@@ -147,11 +149,16 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
                       children: [
                         Text(
                           property.name,
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         Text(
                           property.address,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -194,7 +201,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
               if (property.city != null && property.state != null)
                 _buildInfoRow('Location', '${property.city}, ${property.state}'),
               if (property.currentValue != null)
-                _buildInfoRow('Value', '${property.currencyCode} ${property.currentValue!.toStringAsFixed(2)}'),
+                _buildInfoRow('Value', formatCurrencyAmount(property.currencyCode, property.currentValue!)),
             ],
           ),
         ),
@@ -217,10 +224,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
             ),
           ),
         ],

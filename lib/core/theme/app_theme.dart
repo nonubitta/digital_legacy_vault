@@ -166,6 +166,11 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: navyChip,
+        labelStyle: GoogleFonts.inter(color: textSecondary),
+        floatingLabelStyle: GoogleFonts.inter(color: primaryColor),
+        hintStyle: GoogleFonts.inter(color: textSecondary.withOpacity(0.8)),
+        prefixIconColor: textSecondary,
+        suffixIconColor: textSecondary,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

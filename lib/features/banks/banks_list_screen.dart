@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/bank_account.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_display_helper.dart';
 import 'bank_form_screen.dart';
 
 class BanksListScreen extends StatefulWidget {
@@ -145,7 +146,7 @@ class _BanksListScreenState extends State<BanksListScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AppTheme.dividerColor,
@@ -200,6 +201,7 @@ class _BanksListScreenState extends State<BanksListScreen> {
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             letterSpacing: -0.3,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -272,7 +274,7 @@ class _BanksListScreenState extends State<BanksListScreen> {
                 const SizedBox(height: 12),
                 _buildEnhancedInfoBox(
                   'Balance', 
-                  '${account.currencyCode} ${account.balance!.toStringAsFixed(2)}',
+                  formatCurrencyAmount(account.currencyCode, account.balance!),
                   highlight: true,
                 ),
               ],
