@@ -4,8 +4,10 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/access_code_helper.dart';
 import '../home/home_screen.dart';
 import '../../core/theme/app_theme.dart';
+
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
+
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
@@ -15,6 +17,9 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _hasAccessCode = false;
   String _errorMessage = '';
 
+  // Form keys and controllers for inline unlock form
+  final _formKeyUnlock = GlobalKey<FormState>();
+  final _unlockController = TextEditingController();
   static final RegExp _accessCodePattern = RegExp(r'^[A-Za-z0-9]{4,8}$');
 
   String _normalizeAccessCode(String code) => code.trim().toUpperCase();
@@ -24,13 +29,19 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!_accessCodePattern.hasMatch(code)) {
       return 'Enter 4 to 8 letters or numbers.';
     }
-                    return null;
+    return null;
   }
 
   @override
   void initState() {
     super.initState();
     _initializeAuthFlow();
+  }
+
+  @override
+  void dispose() {
+    _unlockController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeAuthFlow() async {
@@ -48,64 +59,6 @@ class _AuthScreenState extends State<AuthScreen> {
     final hasCode = await _accessCodeHelper.hasAccessCode();
     if (!mounted) return;
     setState(() => _hasAccessCode = hasCode);
-  }
-
-  Future<void> _promptAccessCode() async {
-    final codeController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final unlock = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Enter Access Code'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: codeController,
-              keyboardType: TextInputType.visiblePassword,
-              obscureText: true,
-              maxLength: 8,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Access code',
-                hintText: '4 to 8 letters or numbers',
-              ),
-              validator: _validateAccessCode,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) return;
-                final isValid = await _accessCodeHelper.verifyAccessCode(
-                  _normalizeAccessCode(codeController.text),
-                );
-                if (!dialogContext.mounted) return;
-                if (!isValid) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(content: Text('Incorrect access code.')),
-                  );
-                  return;
-                }
-                Navigator.pop(dialogContext, true);
-              },
-              child: const Text('Unlock'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (unlock == true) {
-      _navigateToHome();
-    }
   }
 
   Future<void> _promptSetAccessCode() async {
@@ -195,9 +148,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _navigateToHome() {
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    Navigator.of(context)
+        .pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
   }
 
   @override
@@ -250,7 +202,10 @@ class _AuthScreenState extends State<AuthScreen> {
                   Text(
                     'Legacy Vault',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    style: Theme.of(context)
+                        .textTheme
+                        .displayMedium
+                        ?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 40,
@@ -260,7 +215,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           color: Colors.black.withOpacity(0.1),
                           offset: const Offset(0, 4),
                           blurRadius: 12,
-                              ),
+                        ),
                       ],
                     ),
                   ),
@@ -268,12 +223,15 @@ class _AuthScreenState extends State<AuthScreen> {
                   Text(
                     'Secure your digital legacy',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.copyWith(
                       color: AppTheme.textPrimary.withOpacity(0.9),
-                                                  fontSize: 16,
-                                            letterSpacing: 0.2,
-              ),
-            ),
+                      fontSize: 16,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
                   const SizedBox(height: 80),
 
                   // Error Message
@@ -285,7 +243,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(16),
-        ),
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -293,7 +251,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 Icons.error_outline_rounded,
                                 color: Colors.white,
                                 size: 24,
-      ),
+                              ),
                               const SizedBox(width: 12),
                               Flexible(
                                 child: Text(
@@ -302,41 +260,76 @@ class _AuthScreenState extends State<AuthScreen> {
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
-              ),
-            ),
-          ),
+                                  ),
+                                ),
+                              ),
                             ],
-        ),
-      ),
-                        const SizedBox(height: 24),
-                        OutlinedButton.icon(
-                          onPressed: _hasAccessCode
-                              ? _promptAccessCode
-                              : _promptSetAccessCode,
-                          icon: Icon(
-                            _hasAccessCode
-                                ? Icons.pin_outlined
-                                : Icons.add_moderator_outlined,
-                          ),
-                          label: Text(
-                            _hasAccessCode
-                                ? 'Use Access Code'
-                                : 'Set Access Code',
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: BorderSide(
-                              color: Colors.white.withOpacity(0.65),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 14,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
                           ),
                         ),
+                        const SizedBox(height: 24),
+                        // Inline unlock form or set code button
+                        if (_hasAccessCode)
+                          // Unlock form (inline)
+                          Form(
+                            key: _formKeyUnlock,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextFormField(
+                                  controller: _unlockController,
+                                  keyboardType: TextInputType.visiblePassword,
+                                  obscureText: true,
+                                  maxLength: 8,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                        RegExp(r'[A-Za-z0-9]')),
+                                  ],
+                                  decoration: const InputDecoration(
+                                    labelText: 'Access code',
+                                    hintText: '4 to 8 letters or numbers',
+                                  ),
+                                  validator: _validateAccessCode,
+                                ),
+                                const SizedBox(height: 16),
+                                FilledButton(
+                                  onPressed: () async {
+                                    if (!_formKeyUnlock.currentState!
+                                        .validate()) return;
+                                    final isValid =
+                                        await _accessCodeHelper.verifyAccessCode(
+                                          _normalizeAccessCode(
+                                              _unlockController.text),
+                                    );
+                                    if (!mounted) return;
+                                    if (!isValid) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content:
+                                                  Text('Incorrect access code.')));
+                                      return;
+                                    }
+                                    _navigateToHome();
+                                  },
+                                  child: const Text('Unlock'),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          // Button to set access code (opens dialog)
+                          FilledButton(
+                            onPressed: _promptSetAccessCode,
+                            child: const Text('Set Access Code'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                 ],
@@ -348,4 +341,3 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 }
-
