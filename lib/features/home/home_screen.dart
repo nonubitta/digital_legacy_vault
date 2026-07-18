@@ -223,14 +223,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (confirm == true && mounted) {
-      final accessCodeHelper = AccessCodeHelper();
-      await accessCodeHelper.clearAccessCode();
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthScreen()),
-        (route) => false,
-      );
-    }
+          if (!mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const AuthScreen()),
+            (route) => false,
+          );
+        }
   }
 
   @override
