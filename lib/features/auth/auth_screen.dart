@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/access_code_helper.dart';
-import '../../core/utils/biometric_helper.dart';
 import '../home/home_screen.dart';
 import '../../core/theme/app_theme.dart';
-
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
   @override
@@ -13,9 +11,7 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final _biometricHelper = BiometricHelper();
   final _accessCodeHelper = AccessCodeHelper();
-  bool _isAuthenticating = false;
   bool _hasAccessCode = false;
   String _errorMessage = '';
 
@@ -30,6 +26,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
                     return null;
   }
+
   @override
   void initState() {
     super.initState();
@@ -40,13 +37,7 @@ class _AuthScreenState extends State<AuthScreen> {
     await _loadAccessCodeStatus();
     if (!mounted) return;
 
-    if (AppConstants.enableBiometricAuth) {
-      _authenticate();
-      return;
-    }
-
     setState(() {
-      _isAuthenticating = false;
       _errorMessage = _hasAccessCode
           ? 'Use access code to continue.'
           : 'Set an access code to continue.';
@@ -57,45 +48,6 @@ class _AuthScreenState extends State<AuthScreen> {
     final hasCode = await _accessCodeHelper.hasAccessCode();
     if (!mounted) return;
     setState(() => _hasAccessCode = hasCode);
-  }
-
-  Future<void> _authenticate() async {
-    if (!AppConstants.enableBiometricAuth) {
-      setState(() {
-        _isAuthenticating = false;
-        _errorMessage = _hasAccessCode
-            ? 'Use access code to continue.'
-            : 'Set an access code to continue.';
-      });
-      return;
-    }
-
-    setState(() {
-      _isAuthenticating = true;
-      _errorMessage = '';
-    });
-
-    try {
-      final authenticated = await _biometricHelper.authenticate(
-        message: 'Authenticate to access your Digital Legacy Vault',
-    );
-
-      if (authenticated) {
-        _navigateToHome();
-      } else {
-        setState(() {
-          _errorMessage = _hasAccessCode
-              ? 'Authentication failed. Try again or use access code.'
-              : 'Authentication failed. Try again or set an access code.';
-          _isAuthenticating = false;
-        });
-  }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'An error occurred: ${e.toString()}';
-        _isAuthenticating = false;
-      });
-}
   }
 
   Future<void> _promptAccessCode() async {
@@ -324,39 +276,6 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
                   const SizedBox(height: 80),
 
-                  // Authentication Status
-                  if (_isAuthenticating)
-                    Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            shape: BoxShape.circle,
-        ),
-                          child: const SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                            ),
-                              strokeWidth: 3,
-      ),
-                          ),
-                                  ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Authenticating...',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.95),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.5,
-                              ),
-                              ),
-                      ],
-                            ),
                   // Error Message
                   if (_errorMessage.isNotEmpty)
                     Column(
@@ -365,8 +284,8 @@ class _AuthScreenState extends State<AuthScreen> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                            borderRadius: BorderRadius.circular(16),
+        ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -374,7 +293,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 Icons.error_outline_rounded,
                                 color: Colors.white,
                                 size: 24,
-                    ),
+      ),
                               const SizedBox(width: 12),
                               Flexible(
                                 child: Text(
@@ -390,26 +309,6 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
                         const SizedBox(height: 24),
-                        if (AppConstants.enableBiometricAuth)
-                          ElevatedButton.icon(
-                            onPressed: _authenticate,
-                            icon: const Icon(Icons.refresh_rounded),
-                            label: const Text('Try Again'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF667EEA),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                        if (AppConstants.enableBiometricAuth)
-                          const SizedBox(height: 10),
                         OutlinedButton.icon(
                           onPressed: _hasAccessCode
                               ? _promptAccessCode

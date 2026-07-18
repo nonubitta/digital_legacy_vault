@@ -2,12 +2,13 @@
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_settings_helper.dart';
+import '../../core/utils/access_code_helper.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/category.dart';
 import '../assets/asset_list_screen.dart';
 import 'manage_category_screen.dart';
+import '../auth/auth_screen.dart';
 import '../settings/settings_screen.dart';
-
 class _Navy {
   static const base = AppTheme.backgroundColor;
   static const surface = AppTheme.surfaceColor;
@@ -97,7 +98,9 @@ class _HomeScreenState extends State<HomeScreen> {
         )
         .toList();
     final systemCategoryPreviews = await Future.wait<MapEntry<String, String>>(
-      visibleCategories.where((category) => category.isSystem).map((
+      visibleCategories
+          .where((category) => category.isSystem)
+          .map((
         category,
       ) async {
         final assets = await _dbHelper.getAssetsByCategory(category.id);
@@ -107,7 +110,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return MapEntry(category.name, preview);
       }),
     );
-
     setState(() {
       _categories = visibleCategories;
       _categoryCounts = results[1] as Map<String, int>;
@@ -193,6 +195,44 @@ class _HomeScreenState extends State<HomeScreen> {
     _reload();
   }
 
+  Future<void> _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _Navy.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Logout', style: GoogleFonts.inter(color: _Navy.text)),
+        content: Text(
+          'Are you sure you want to logout?',
+            style: GoogleFonts.inter(color: _Navy.textDim),
+          ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel', style: GoogleFonts.inter(color: _Navy.textDim)),
+        ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+        ),
+            child: Text('Logout', style: GoogleFonts.inter(color: Colors.white)),
+          ),
+                              ],
+                            ),
+    );
+
+    if (confirm == true && mounted) {
+      final accessCodeHelper = AccessCodeHelper();
+      await accessCodeHelper.clearAccessCode();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,20 +295,34 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           IconButton(
-            onPressed: _openSettings,
+            onPressed: _logout,
             style: IconButton.styleFrom(
               backgroundColor: _Navy.chip,
               shape: const CircleBorder(),
             ),
             icon: const Icon(
-              Icons.settings_rounded,
-              color: _Navy.text,
+              Icons.logout_rounded,
+              color: Colors.redAccent,
               size: 18,
             ),
-            tooltip: 'Settings',
+            tooltip: 'Logout',
           ),
-        ],
-      ),
+                              const SizedBox(width: 8),
+          IconButton(
+            onPressed: _openSettings,
+            style: IconButton.styleFrom(
+              backgroundColor: _Navy.chip,
+              shape: const CircleBorder(),
+                                  ),
+            icon: const Icon(
+              Icons.settings_rounded,
+                              color: _Navy.text,
+              size: 18,
+                            ),
+            tooltip: 'Settings',
+                          ),
+                        ],
+                      ),
     );
   }
 
@@ -281,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'Overview',
             style: GoogleFonts.inter(color: _Navy.textDim, fontSize: 13),
-          ),
+      ),
           const SizedBox(height: 2),
           Text(
             'Your holdings',
@@ -362,31 +416,31 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
+}
 
-    Widget _buildSplitBar() {
+  Widget _buildSplitBar() {
     if (_categories.isEmpty) return const SizedBox.shrink();
     final nonDebt = _categories.where((c) => c.name != 'Debt').toList();
     final values = nonDebt.map((c) => _usdFor(c.name)).toList();
-      final total = values.fold(0.0, (a, b) => a + b);
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: SizedBox(
-          height: 5,
-          child: Row(
-            children: [
-              for (var i = 0; i < nonDebt.length; i++)
-                Expanded(
-                  flex: total > 0
-                      ? (values[i] * 1000 / total).round().clamp(1, 100000)
-                      : 1,
-                  child: Container(color: _colorFor(nonDebt.elementAt(i), i)),
-                ),
-            ],
-          ),
+    final total = values.fold(0.0, (a, b) => a + b);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: SizedBox(
+        height: 5,
+        child: Row(
+          children: [
+            for (var i = 0; i < nonDebt.length; i++)
+              Expanded(
+                flex: total > 0
+                    ? (values[i] * 1000 / total).round().clamp(1, 100000)
+                    : 1,
+                child: Container(color: _colorFor(nonDebt.elementAt(i), i)),
+              ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
   Widget _buildSectionHeader() {
     return Padding(
@@ -599,5 +653,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
 

@@ -81,4 +81,10 @@ class AccessCodeHelper {
       value: jsonEncode(normalized),
     );
   }
+
+  Future<void> clearAccessCode() async {
+    await _secureStorage.delete(key: _accessCodeKey);
+    await _secureStorage.delete(key: _securityQuestionsKey);
+  }
 }
+
