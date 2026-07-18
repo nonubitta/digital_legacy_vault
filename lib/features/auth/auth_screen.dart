@@ -4,10 +4,10 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/access_code_helper.dart';
 import '../../core/utils/biometric_helper.dart';
 import '../home/home_screen.dart';
+import '../../core/theme/app_theme.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
-
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
@@ -28,9 +28,8 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!_accessCodePattern.hasMatch(code)) {
       return 'Enter 4 to 8 letters or numbers.';
     }
-    return null;
+                    return null;
   }
-
   @override
   void initState() {
     super.initState();
@@ -79,7 +78,7 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       final authenticated = await _biometricHelper.authenticate(
         message: 'Authenticate to access your Digital Legacy Vault',
-      );
+    );
 
       if (authenticated) {
         _navigateToHome();
@@ -90,13 +89,13 @@ class _AuthScreenState extends State<AuthScreen> {
               : 'Authentication failed. Try again or set an access code.';
           _isAuthenticating = false;
         });
-      }
+  }
     } catch (e) {
       setState(() {
         _errorMessage = 'An error occurred: ${e.toString()}';
         _isAuthenticating = false;
       });
-    }
+}
   }
 
   Future<void> _promptAccessCode() async {
@@ -138,7 +137,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 );
                 if (!dialogContext.mounted) return;
                 if (!isValid) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(content: Text('Incorrect access code.')),
                   );
                   return;
@@ -253,12 +252,8 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-          ),
+        decoration: BoxDecoration(
+          gradient: AppTheme.primaryGradient,
         ),
         child: SafeArea(
           child: Center(
@@ -299,7 +294,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 48),
-
                   // App Name
                   Text(
                     'Legacy Vault',
@@ -314,21 +308,20 @@ class _AuthScreenState extends State<AuthScreen> {
                           color: Colors.black.withOpacity(0.1),
                           offset: const Offset(0, 4),
                           blurRadius: 12,
-                        ),
+                              ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
-
                   Text(
                     'Secure your digital legacy',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 16,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
+                      color: AppTheme.textPrimary.withOpacity(0.9),
+                                                  fontSize: 16,
+                                            letterSpacing: 0.2,
+              ),
+            ),
                   const SizedBox(height: 80),
 
                   // Authentication Status
@@ -340,18 +333,18 @@ class _AuthScreenState extends State<AuthScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
                             shape: BoxShape.circle,
-                          ),
+        ),
                           child: const SizedBox(
                             width: 32,
                             height: 32,
                             child: CircularProgressIndicator(
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 Colors.white,
-                              ),
-                              strokeWidth: 3,
                             ),
+                              strokeWidth: 3,
+      ),
                           ),
-                        ),
+                                  ),
                         const SizedBox(height: 24),
                         Text(
                           'Authenticating...',
@@ -360,11 +353,10 @@ class _AuthScreenState extends State<AuthScreen> {
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.5,
-                          ),
-                        ),
+                              ),
+                              ),
                       ],
-                    ),
-
+                            ),
                   // Error Message
                   if (_errorMessage.isNotEmpty)
                     Column(
@@ -373,8 +365,8 @@ class _AuthScreenState extends State<AuthScreen> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -382,7 +374,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 Icons.error_outline_rounded,
                                 color: Colors.white,
                                 size: 24,
-                              ),
+                    ),
                               const SizedBox(width: 12),
                               Flexible(
                                 child: Text(
@@ -391,12 +383,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
-                                  ),
-                                ),
-                              ),
+              ),
+            ),
+          ),
                             ],
-                          ),
-                        ),
+        ),
+      ),
                         const SizedBox(height: 24),
                         if (AppConstants.enableBiometricAuth)
                           ElevatedButton.icon(
@@ -457,3 +449,4 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 }
+
