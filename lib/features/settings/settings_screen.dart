@@ -100,126 +100,134 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showCurrencyDialog({Map<String, dynamic>? currency}) async {
-    final isEdit = currency != null;
-    final codeController = TextEditingController(
-      text: isEdit ? currency['code'].toString() : '',
-    );
-    final nameController = TextEditingController(
-      text: isEdit ? currency['name'].toString() : '',
-    );
-    final rateController = TextEditingController(
-      text: isEdit ? (currency['rateToUsd'] as num).toString() : '',
-    );
-    final formKey = GlobalKey<FormState>();
+      final isEdit = currency != null;
+      final codeController = TextEditingController(
+        text: isEdit ? currency['code'].toString() : '',
+      );
+      final nameController = TextEditingController(
+        text: isEdit ? currency['name'].toString() : '',
+      );
+      final rateController = TextEditingController(
+        text: isEdit ? (currency['rateToUsd'] as num).toString() : '',
+      );
+      final formKey = GlobalKey<FormState>();
 
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(isEdit ? 'Edit Currency' : 'Add Currency'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: codeController,
-                  textCapitalization: TextCapitalization.characters,
-                  enabled: !isEdit,
-                  decoration: const InputDecoration(
-                    labelText: 'Currency Code *',
-                    hintText: 'e.g., EUR, INR, AED',
-                    prefixIcon: Icon(Icons.tag),
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(isEdit ? 'Edit Currency' : 'Add Currency'),
+            content: SizedBox(
+              width: 560,
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 300),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: codeController,
+                          textCapitalization: TextCapitalization.characters,
+                          enabled: !isEdit,
+                          decoration: const InputDecoration(
+                            labelText: 'Currency Code *',
+                            hintText: 'e.g., EUR, INR, AED',
+                            prefixIcon: Icon(Icons.tag),
+                          ),
+                          validator: (value) {
+                            final code = (value ?? '').trim().toUpperCase();
+                            final codeRegex = RegExp(r'^[A-Z]{3,6}$');
+                            if (code.isEmpty) {
+                              return 'Currency code is required';
+                            }
+                            if (!codeRegex.hasMatch(code)) {
+                              return 'Use 3 to 6 uppercase letters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Currency Name *',
+                            hintText: 'e.g., Euro, Indian Rupee',
+                            prefixIcon: Icon(Icons.currency_exchange),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Currency name is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: rateController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Currency Units per 1 USD *',
+                            hintText: 'e.g., 83 for INR, 0.92 for EUR',
+                            prefixIcon: Icon(Icons.calculate_outlined),
+                          ),
+                          validator: (value) {
+                            final parsed = double.tryParse((value ?? '').trim());
+                            if (parsed == null || parsed <= 0) {
+                              return 'Enter a valid number greater than 0';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  validator: (value) {
-                    final code = (value ?? '').trim().toUpperCase();
-                    final codeRegex = RegExp(r'^[A-Z]{3,6}$');
-                    if (code.isEmpty) {
-                      return 'Currency code is required';
-                    }
-                    if (!codeRegex.hasMatch(code)) {
-                      return 'Use 3 to 6 uppercase letters';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Currency Name *',
-                    hintText: 'e.g., Euro, Indian Rupee',
-                    prefixIcon: Icon(Icons.currency_exchange),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Currency name is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: rateController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Currency Units per 1 USD *',
-                    hintText: 'e.g., 83 for INR, 0.92 for EUR',
-                    prefixIcon: Icon(Icons.calculate_outlined),
-                  ),
-                  validator: (value) {
-                    final parsed = double.tryParse((value ?? '').trim());
-                    if (parsed == null || parsed <= 0) {
-                      return 'Enter a valid number greater than 0';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) {
-                  return;
-                }
-                final code = codeController.text.trim().toUpperCase();
-                final name = nameController.text.trim();
-                final rate = double.parse(rateController.text.trim());
-                await _dbHelper.upsertCurrency(
-                  code: code,
-                  name: name,
-                  rateToUsd: rate,
-                );
-                if (mounted) {
-                  Navigator.pop(context, true);
-                }
-              },
-              child: Text(isEdit ? 'Save' : 'Add'),
-            ),
-          ],
-        );
-      },
-    );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (!formKey.currentState!.validate()) {
+                    return;
+                  }
+                  final code = codeController.text.trim().toUpperCase();
+                  final name = nameController.text.trim();
+                  final rate = double.parse(rateController.text.trim());
+                  await _dbHelper.upsertCurrency(
+                    code: code,
+                    name: name,
+                    rateToUsd: rate,
+                  );
+                  if (mounted) {
+                    Navigator.pop(context, true);
+                  }
+                },
+                child: Text(isEdit ? 'Save' : 'Add'),
+              ),
+            ],
+          );
+        },
+      );
 
-    if (saved == true) {
-      await _loadCurrencies();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEdit ? 'Currency updated' : 'Currency added'),
-          ),
-        );
+      if (saved == true) {
+        await _loadCurrencies();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isEdit ? 'Currency updated' : 'Currency added'),
+            ),
+          );
+        }
       }
     }
-  }
 
   Future<void> _deleteCurrency(Map<String, dynamic> currency) async {
     final code = currency['code'].toString();

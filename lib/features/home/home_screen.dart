@@ -122,21 +122,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   int get _totalAssets =>
-      _categories.fold(0, (sum, category) => sum + _countFor(category.name));
+      _categories
+          .where((c) => c.name != 'Debt')
+          .fold(0, (sum, category) => sum + _countFor(category.name));
   double get _totalUsd =>
-      _categories.fold(0.0, (sum, category) => sum + _usdFor(category.name));
+      _categories
+          .where((c) => c.name != 'Debt')
+          .fold(0.0, (sum, category) => sum + _usdFor(category.name));
+
+  int get _assetCategoriesCount =>
+      _categories.where((c) => c.name != 'Debt').length;
   int _countFor(String n) => _categoryCounts[n] ?? 0;
   double _usdFor(String n) => _categoryUsdTotals[n] ?? 0;
-
-  String get _largestCategoryTitle {
-    if (_categories.isEmpty || _totalUsd <= 0) return '\u2014';
-    final withValues = _categories
-        .map((category) => MapEntry(category.name, _usdFor(category.name)))
-        .where((entry) => entry.value > 0)
-        .toList();
-    if (withValues.isEmpty) return '\u2014';
-    return withValues.reduce((a, b) => a.value >= b.value ? a : b).key;
-  }
 
   Color _colorFor(Category cat, int i) =>
       _parseColor(cat.color, _accentFallbacks[i % _accentFallbacks.length]);
@@ -350,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${_categories.length} categories \u00b7 $_totalAssets items',
+                  '$_assetCategoriesCount categories \u00b7 $_totalAssets items',
                   style: GoogleFonts.inter(
                     color: _Navy.positive,
                     fontSize: 10.5,
@@ -367,28 +364,29 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSplitBar() {
+    Widget _buildSplitBar() {
     if (_categories.isEmpty) return const SizedBox.shrink();
-    final values = _categories.map((c) => _usdFor(c.name)).toList();
-    final total = values.fold(0.0, (a, b) => a + b);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: SizedBox(
-        height: 5,
-        child: Row(
-          children: [
-            for (var i = 0; i < _categories.length; i++)
-              Expanded(
-                flex: total > 0
-                    ? (values[i] * 1000 / total).round().clamp(1, 100000)
-                    : 1,
-                child: Container(color: _colorFor(_categories[i], i)),
-              ),
-          ],
+    final nonDebt = _categories.where((c) => c.name != 'Debt').toList();
+    final values = nonDebt.map((c) => _usdFor(c.name)).toList();
+      final total = values.fold(0.0, (a, b) => a + b);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: SizedBox(
+          height: 5,
+          child: Row(
+            children: [
+              for (var i = 0; i < nonDebt.length; i++)
+                Expanded(
+                  flex: total > 0
+                      ? (values[i] * 1000 / total).round().clamp(1, 100000)
+                      : 1,
+                  child: Container(color: _colorFor(nonDebt.elementAt(i), i)),
+                ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
   Widget _buildSectionHeader() {
     return Padding(
@@ -601,3 +599,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+
