@@ -9,6 +9,7 @@ import '../assets/asset_list_screen.dart';
 import 'manage_category_screen.dart';
 import '../auth/auth_screen.dart';
 import '../settings/settings_screen.dart';
+
 class _Navy {
   static const base = AppTheme.backgroundColor;
   static const surface = AppTheme.surfaceColor;
@@ -22,6 +23,9 @@ class _Navy {
   static const emerald = AppTheme.secondaryColor;
   static const violet = Color(0xFFA78BFA);
   static const coral = Color(0xFFF2795A);
+  // hero gradient ground — deep indigo fading toward the app background
+  static const heroDeep = Color(0xFF1B1F3B);
+  static const heroMid = Color(0xFF1E2036);
 }
 
 IconData _iconForName(String? name) {
@@ -98,9 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
         )
         .toList();
     final systemCategoryPreviews = await Future.wait<MapEntry<String, String>>(
-      visibleCategories
-          .where((category) => category.isSystem)
-          .map((
+      visibleCategories.where((category) => category.isSystem).map((
         category,
       ) async {
         final assets = await _dbHelper.getAssetsByCategory(category.id);
@@ -123,14 +125,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  int get _totalAssets =>
-      _categories
-          .where((c) => c.name != 'Debt')
-          .fold(0, (sum, category) => sum + _countFor(category.name));
-  double get _totalUsd =>
-      _categories
-          .where((c) => c.name != 'Debt')
-          .fold(0.0, (sum, category) => sum + _usdFor(category.name));
+  int get _totalAssets => _categories
+      .where((c) => c.name != 'Debt')
+      .fold(0, (sum, category) => sum + _countFor(category.name));
+  double get _totalUsd => _categories
+      .where((c) => c.name != 'Debt')
+      .fold(0.0, (sum, category) => sum + _usdFor(category.name));
+  double get _totalDebtUsd => _usdFor('Debt');
 
   int get _assetCategoriesCount =>
       _categories.where((c) => c.name != 'Debt').length;
@@ -159,7 +160,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _homeAmountDisplay() {
+    return _showHomeAmounts ? _formatUsdFull(_totalUsd - _totalDebtUsd) : '*****';
+  }
+
+  String _assetsAmountDisplay() {
     return _showHomeAmounts ? _formatUsdFull(_totalUsd) : '*****';
+  }
+
+  String _debtAmountDisplay() {
+    return _showHomeAmounts ? _formatUsdFull(_totalDebtUsd) : '*****';
   }
 
   String _categoryAmountDisplay(double value) {
@@ -172,6 +181,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (nonEmpty.length == 1) return nonEmpty.first;
     if (nonEmpty.length == 2) return nonEmpty.join(', ');
     return '${nonEmpty.take(2).join(', ')}, ...';
+  }
+
+  void _toggleAmounts() {
+    setState(() => _showHomeAmounts = !_showHomeAmounts);
   }
 
   void _openCategory(Category cat) async {
@@ -204,31 +217,29 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text('Logout', style: GoogleFonts.inter(color: _Navy.text)),
         content: Text(
           'Are you sure you want to logout?',
-            style: GoogleFonts.inter(color: _Navy.textDim),
-          ),
+          style: GoogleFonts.inter(color: _Navy.textDim),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text('Cancel', style: GoogleFonts.inter(color: _Navy.textDim)),
-        ),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-        ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             child: Text('Logout', style: GoogleFonts.inter(color: Colors.white)),
           ),
-                              ],
-                            ),
+        ],
+      ),
     );
 
     if (confirm == true && mounted) {
-          if (!mounted) return;
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const AuthScreen()),
-            (route) => false,
-          );
-        }
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -239,108 +250,174 @@ class _HomeScreenState extends State<HomeScreen> {
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildGreeting()),
             SliverToBoxAdapter(child: _buildHero()),
-            SliverToBoxAdapter(child: _buildSectionHeader()),
-            _isLoading
-                ? const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(64),
-                      child: Center(
-                        child: CircularProgressIndicator(color: _Navy.blue),
-                      ),
-                    ),
-                  )
-                : SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                    sliver: SliverToBoxAdapter(child: _buildCardGrid()),
-                  ),
+            SliverToBoxAdapter(
+              child: _buildCurvedPanel(
+                _isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(64),
+                        child: Center(
+                          child: CircularProgressIndicator(color: _Navy.blue),
+                        ),
+                      )
+                    : _buildCardGrid(),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
-      child: Row(
+  // Curved gradient hero — title row, net worth + eye toggle, distribution
+  // line, and the Total Assets / Debt split.
+  Widget _buildHero() {
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(44),
+        bottomRight: Radius.circular(44),
+      ),
+      child: Stack(
         children: [
           Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _Navy.chip,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: const Icon(
-              Icons.shield_rounded,
-              color: _Navy.text,
-              size: 15,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _vaultName,
-              style: GoogleFonts.inter(
-                color: _Navy.text,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [_Navy.heroDeep, _Navy.heroMid, _Navy.base],
+                stops: [0.0, 0.55, 1.0],
               ),
             ),
           ),
-          IconButton(
-            onPressed: _logout,
-            style: IconButton.styleFrom(
-              backgroundColor: _Navy.chip,
-              shape: const CircleBorder(),
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 380,
+              height: 380,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    Color.lerp(_Navy.blue, _Navy.heroDeep, 0.3)!.withOpacity(0.4),
+                    Color.lerp(_Navy.blue, _Navy.heroDeep, 0.3)!.withOpacity(0.12),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
             ),
-            icon: const Icon(
-              Icons.logout_rounded,
-              color: Colors.redAccent,
-              size: 18,
-            ),
-            tooltip: 'Logout',
           ),
-                              const SizedBox(width: 8),
-          IconButton(
-            onPressed: _openSettings,
-            style: IconButton.styleFrom(
-              backgroundColor: _Navy.chip,
-              shape: const CircleBorder(),
-                                  ),
-            icon: const Icon(
-              Icons.settings_rounded,
-                              color: _Navy.text,
-              size: 18,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      _vaultName,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    _heroIconButton(Icons.settings_rounded, _openSettings),
+                    const SizedBox(width: 8),
+                    _heroIconButton(Icons.logout_rounded, _logout),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'NET WORTH',
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withOpacity(0.65),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: _toggleAmounts,
+                      child: Icon(
+                        _showHomeAmounts
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 15,
+                        color: Colors.white.withOpacity(0.65),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _isLoading ? '\u2013' : _homeAmountDisplay(),
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSplitBar(),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Total Assets',
+                            style: GoogleFonts.inter(
+                              color: Colors.white.withOpacity(0.65),
+                              fontSize: 12,
                             ),
-            tooltip: 'Settings',
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _isLoading ? '\u2013' : _assetsAmountDisplay(),
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
-    );
-  }
-
-  Widget _buildGreeting() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Overview',
-            style: GoogleFonts.inter(color: _Navy.textDim, fontSize: 13),
-      ),
-          const SizedBox(height: 2),
-          Text(
-            'Your holdings',
-            style: GoogleFonts.inter(
-              color: _Navy.text,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Debt',
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withOpacity(0.65),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _isLoading ? '\u2013' : _debtAmountDisplay(),
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withOpacity(0.75),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -348,92 +425,43 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHero() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 6),
+  Widget _heroIconButton(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1C2A5E), Color(0xFF131C40)],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF263466)),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.3)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'TOTAL ASSETS TRACKED',
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withOpacity(0.55),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _isLoading ? '\u2013' : _homeAmountDisplay(),
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _Navy.positive.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$_assetCategoriesCount categories \u00b7 $_totalAssets items',
-                  style: GoogleFonts.inter(
-                    color: _Navy.positive,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            _buildSplitBar(),
-          ],
-        ),
+        child: Icon(icon, color: Colors.white, size: 16),
       ),
     );
-}
+  }
 
+  // Thin distribution line: assets (white) vs debt (dim remainder).
   Widget _buildSplitBar() {
-    if (_categories.isEmpty) return const SizedBox.shrink();
-    final nonDebt = _categories.where((c) => c.name != 'Debt').toList();
-    final values = nonDebt.map((c) => _usdFor(c.name)).toList();
-    final total = values.fold(0.0, (a, b) => a + b);
+    final assets = _totalUsd;
+    final debt = _totalDebtUsd;
+    final total = assets + debt;
+    final assetsFraction = total > 0 ? (assets / total).clamp(0.0, 1.0) : 1.0;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(3),
       child: SizedBox(
-        height: 5,
+        height: 6,
         child: Row(
           children: [
-            for (var i = 0; i < nonDebt.length; i++)
-              Expanded(
-                flex: total > 0
-                    ? (values[i] * 1000 / total).round().clamp(1, 100000)
-                    : 1,
-                child: Container(color: _colorFor(nonDebt.elementAt(i), i)),
-              ),
+            Expanded(
+              flex: (assetsFraction * 1000).round().clamp(1, 1000),
+              child: Container(color: Colors.white),
+            ),
+            Expanded(
+              flex: (1000 - (assetsFraction * 1000).round()).clamp(1, 1000),
+              child: Container(color: Colors.white.withOpacity(0.18)),
+            ),
           ],
         ),
       ),
@@ -442,7 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSectionHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 10),
       child: Row(
         children: [
           Text(
@@ -470,6 +498,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Rounded-top panel overlapping the hero's bottom edge — this overlap +
+  // radius + shadow is what reads as the curve separating hero from content.
+  Widget _buildCurvedPanel(Widget content) {
+    return Transform.translate(
+      offset: const Offset(0, -28),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _Navy.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(28),
+            topRight: Radius.circular(28),
+          ),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 6)),
+          ],
+        ),
+        padding: const EdgeInsets.only(bottom: 20),
+        child: Column(
+          children: [
+            _buildSectionHeader(),
+            content,
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCardGrid() {
     if (_categories.isEmpty) {
       return Center(
@@ -483,26 +538,16 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     final rows = <Widget>[];
-    for (var i = 0; i < _categories.length; i += 2) {
-      final isLast = i + 1 >= _categories.length;
-      rows.add(
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _buildCard(_categories[i], i, wide: isLast)),
-            if (!isLast) ...[
-              const SizedBox(width: 10),
-              Expanded(child: _buildCard(_categories[i + 1], i + 1)),
-            ],
-          ],
-        ),
-      );
-      if (i + 2 < _categories.length) rows.add(const SizedBox(height: 10));
+    for (var i = 0; i < _categories.length; i++) {
+      rows.add(_buildCategoryRow(_categories[i], i));
+      if (i + 1 < _categories.length) {
+        rows.add(Container(height: 1, color: _Navy.border, margin: const EdgeInsets.only(left: 24)));
+      }
     }
     return Column(children: rows);
   }
 
-  Widget _buildCard(Category cat, int index, {bool wide = false}) {
+  Widget _buildCategoryRow(Category cat, int index) {
     final count = _countFor(cat.name);
     final usdLabel = _categoryAmountDisplay(_usdFor(cat.name));
     final color = _colorFor(cat, index);
@@ -515,121 +560,44 @@ class _HomeScreenState extends State<HomeScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _openCategory(cat),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _Navy.surface,
-            border: Border.all(color: _Navy.border),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Row(
             children: [
-              Container(height: 3, color: color),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: wide
-                    ? Row(
-                        children: [
-                          _iconBadge(icon, color),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  cat.name,
-                                  style: GoogleFonts.inter(
-                                    color: _Navy.text,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  subtitle,
-                                  style: GoogleFonts.inter(
-                                    color: _Navy.textDim,
-                                    fontSize: 10,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                usdLabel,
-                                style: GoogleFonts.inter(
-                                  color: _Navy.text,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              Text(
-                                '$count ${count == 1 ? "item" : "items"}',
-                                style: GoogleFonts.inter(
-                                  color: _Navy.textDim,
-                                  fontSize: 9.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              _iconBadge(icon, color),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  cat.name,
-                                  style: GoogleFonts.inter(
-                                    color: _Navy.text,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            subtitle,
-                            style: GoogleFonts.inter(
-                              color: _Navy.textDim,
-                              fontSize: 10,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 7),
-                          Text(
-                            usdLabel,
-                            style: GoogleFonts.inter(
-                              color: _Navy.text,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 0),
-                          Text(
-                            '$count ${count == 1 ? "item" : "items"}',
-                            style: GoogleFonts.inter(
-                              color: _Navy.textDim,
-                              fontSize: 9.5,
-                            ),
-                          ),
-                        ],
+              _iconBadge(icon, color),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cat.name,
+                      style: GoogleFonts.inter(
+                        color: _Navy.text,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle.isEmpty ? '$count ${count == 1 ? "item" : "items"}' : subtitle,
+                      style: GoogleFonts.inter(color: _Navy.textDim, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                usdLabel,
+                style: GoogleFonts.inter(
+                  color: _Navy.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -640,15 +608,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _iconBadge(IconData icon, Color color) {
     return Container(
-      width: 30,
-      height: 30,
+      width: 38,
+      height: 38,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.16),
-        borderRadius: BorderRadius.circular(9),
+        color: _Navy.base,
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, color: color, size: 13),
+      child: Icon(icon, color: color, size: 17),
     );
   }
 }
-

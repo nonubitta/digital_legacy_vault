@@ -2,55 +2,55 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Global palette derived from the Home screen design.
-  static const primaryColor = Color(0xFF4C8DFF);
-  static const secondaryColor = Color(0xFF34D399);
-  static const accentColor = Color(0xFFE8A33D);
-  static const backgroundColor = Color(0xFF0A1128);
-  static const surfaceColor = Color(0xFF10193A);
+  // Nocturne palette — dark blue-grey ground, single blurple accent.
+  static const primaryColor = Color(0xFF9184D9);      // accent
+  static const secondaryColor = Color(0xFFA7A1DB);    // accent-2 (same hue family)
+  static const accentColor = Color(0xFFB5ABFC);       // accent-400, lighter highlight
+  static const backgroundColor = Color(0xFF161826);
+  static const surfaceColor = Color(0xFF232532);
   static const errorColor = Color(0xFFE53935);
   static const successColor = Color(0xFF43A047);
 
   static const cardShadowColor = Color(0x33000000);
-  static const highlightColor = Color(0xFF16204A);
-  static const dividerColor = Color(0xFF1C2750);
+  static const highlightColor = Color(0xFF2B2741);    // accent-900
+  static const dividerColor = Color(0xFF3F424D);      // neutral-800
 
-  static const textPrimary = Color(0xFFEEF1F5);
-  static const textSecondary = Color(0xFF7C88AB);
-  static const textLight = Color(0xFFA6B1CF);
+  static const textPrimary = Color(0xFFE9E9ED);
+  static const textSecondary = Color(0xFF9397AB);     // neutral-500
+  static const textLight = Color(0xFFCFD3E5);         // neutral-300
 
-  static const navyBorder = Color(0xFF1C2750);
-  static const navyChip = Color(0xFF16204A);
+  static const navyBorder = Color(0xFF3F424D);        // neutral-800
+  static const navyChip = Color(0xFF292B31);          // neutral-900
   static const navyPositive = Color(0xFF7DD3B0);
 
   static const categoryAccentFallbacks = [
-    Color(0xFF4C8DFF),
-    Color(0xFFE8A33D),
-    Color(0xFF34D399),
-    Color(0xFFA78BFA),
-    Color(0xFFF2795A),
+    Color(0xFF9184D9), // accent-500
+    Color(0xFFB5ABFC), // accent-400
+    Color(0xFF796CBF), // accent-600
+    Color(0xFFD2CEFD), // accent-300
+    Color(0xFF5D5294), // accent-700
   ];
 
   // Gradients
   static const primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1C2A5E), Color(0xFF131C40)],
+    colors: [Color(0xFF262A60), Color(0xFF161826)],
   );
 
   static const cardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF131C40), Color(0xFF10193A)],
+    colors: [Color(0xFF232532), Color(0xFF1C1E2A)],
   );
 
   static const shimmerGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF1C2750),
-      Color(0xFF10193A),
-      Color(0xFF1C2750),
+      Color(0xFF3F424D),
+      Color(0xFF232532),
+      Color(0xFF3F424D),
     ],
   );
 
