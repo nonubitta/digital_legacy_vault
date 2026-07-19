@@ -603,15 +603,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 																	],
 																),
 																title: Text(category.name),
-																subtitle: Text(
-																		category.description?.isNotEmpty == true
-																				? category.description!
-																				: (category.isSystem
-																						? (_isSystemCategoryEnabled(category)
-																								? 'System category (On)'
-																								: 'System category (Off)')
-																						: 'Custom category'),
-																),
+								
 																trailing: category.isSystem
 																				? Switch.adaptive(
 																						value: _isSystemCategoryEnabled(category),
