@@ -160,7 +160,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _homeAmountDisplay() {
-    return _showHomeAmounts ? _formatUsdFull(_totalUsd - _totalDebtUsd) : '*****';
+    return _showHomeAmounts
+        ? _formatUsdFull(_totalUsd - _totalDebtUsd)
+        : '*****';
   }
 
   String _assetsAmountDisplay() {
@@ -222,12 +224,18 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('Cancel', style: GoogleFonts.inter(color: _Navy.textDim)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: _Navy.textDim),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: Text('Logout', style: GoogleFonts.inter(color: Colors.white)),
+            child: Text(
+              'Logout',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -299,8 +307,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    Color.lerp(_Navy.blue, _Navy.heroDeep, 0.3)!.withOpacity(0.4),
-                    Color.lerp(_Navy.blue, _Navy.heroDeep, 0.3)!.withOpacity(0.12),
+                    Color.lerp(
+                      _Navy.blue,
+                      _Navy.heroDeep,
+                      0.3,
+                    )!.withOpacity(0.4),
+                    Color.lerp(
+                      _Navy.blue,
+                      _Navy.heroDeep,
+                      0.3,
+                    )!.withOpacity(0.12),
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.5, 1.0],
@@ -368,7 +384,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildSplitBar(),
-                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -404,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontSize: 12,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4), // Added spacing
                         Text(
                           _isLoading ? '\u2013' : _debtAmountDisplay(),
                           style: GoogleFonts.inter(
@@ -415,6 +430,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(
+                      height: 60,
+                    ), // Added spacing between debt and categories
                   ],
                 ),
               ],
@@ -511,16 +529,15 @@ class _HomeScreenState extends State<HomeScreen> {
             topRight: Radius.circular(28),
           ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 6)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
           ],
         ),
         padding: const EdgeInsets.only(bottom: 20),
-        child: Column(
-          children: [
-            _buildSectionHeader(),
-            content,
-          ],
-        ),
+        child: Column(children: [_buildSectionHeader(), content]),
       ),
     );
   }
@@ -529,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_categories.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.fromLTRB(32, 32, 32, 32),
           child: Text(
             'No categories yet',
             style: GoogleFonts.inter(color: _Navy.textDim),
@@ -541,7 +558,13 @@ class _HomeScreenState extends State<HomeScreen> {
     for (var i = 0; i < _categories.length; i++) {
       rows.add(_buildCategoryRow(_categories[i], i));
       if (i + 1 < _categories.length) {
-        rows.add(Container(height: 1, color: _Navy.border, margin: const EdgeInsets.only(left: 24)));
+        rows.add(
+          Container(
+            height: 1,
+            color: _Navy.border,
+            margin: const EdgeInsets.only(left: 24),
+          ),
+        );
       }
     }
     return Column(children: rows);
@@ -582,8 +605,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      subtitle.isEmpty ? '$count ${count == 1 ? "item" : "items"}' : subtitle,
-                      style: GoogleFonts.inter(color: _Navy.textDim, fontSize: 12),
+                      subtitle.isEmpty
+                          ? '$count ${count == 1 ? "item" : "items"}'
+                          : subtitle,
+                      style: GoogleFonts.inter(
+                        color: _Navy.textDim,
+                        fontSize: 12,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
