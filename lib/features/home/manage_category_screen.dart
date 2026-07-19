@@ -566,7 +566,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 										),
 										Expanded(
 											child: ReorderableListView.builder(
-												padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+												padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
 												buildDefaultDragHandles: false,
 												itemCount: _categories.length,
 												onReorder: _onReorder,
@@ -578,9 +578,9 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
 														child: Card(
 															child: ListTile(
 																contentPadding: const EdgeInsets.symmetric(
-																	horizontal: 16,
-																	vertical: 8,
-																),
+																						horizontal: 8,
+																						vertical: 8,
+																					),
 																leading: Row(
 																	mainAxisSize: MainAxisSize.min,
 																	children: [
