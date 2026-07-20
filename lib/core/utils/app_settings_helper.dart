@@ -13,6 +13,8 @@ class AppSettingsHelper {
   static const String _disabledSystemCategoriesKey =
       'disabled_system_categories';
   static const String defaultVaultName = 'Legacy Vault';
+  static const String _securityLevelKey = 'security_level';
+  static const String defaultSecurityLevel = 'MEDIUM';
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
@@ -94,5 +96,22 @@ class AppSettingsHelper {
       key: _disabledSystemCategoriesKey,
       value: jsonEncode(disabled.toList()..sort()),
     );
+  }
+
+  Future<String> getSecurityLevel() async {
+    final saved = await _secureStorage.read(key: _securityLevelKey);
+    if (saved == null || saved.trim().isEmpty) {
+      return defaultSecurityLevel;
+    }
+    return saved.trim();
+  }
+
+  Future<void> saveSecurityLevel(String level) async {
+    final normalized = level.trim();
+    if (normalized.isEmpty || normalized == defaultSecurityLevel) {
+      await _secureStorage.delete(key: _securityLevelKey);
+      return;
+    }
+    await _secureStorage.write(key: _securityLevelKey, value: normalized);
   }
 }

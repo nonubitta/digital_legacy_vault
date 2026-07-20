@@ -23,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _hasSecurityQuestions = false;
   bool _showHomeAmounts = true;
   bool _isLoading = true;
+  String _securityLevel = 'LOW';
 
   String _normalizeAccessCode(String code) => code.trim().toUpperCase();
 
@@ -37,10 +38,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeSecurityLevel();
     _loadCurrencies();
     _loadVaultName();
     _loadShowHomeAmounts();
     _loadSecurityQuestionsStatus();
+  }
+
+  Future<void> _initializeSecurityLevel() async {
+    _securityLevel = await _appSettings.getSecurityLevel();
   }
 
   @override
@@ -100,134 +106,134 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showCurrencyDialog({Map<String, dynamic>? currency}) async {
-      final isEdit = currency != null;
-      final codeController = TextEditingController(
-        text: isEdit ? currency['code'].toString() : '',
-      );
-      final nameController = TextEditingController(
-        text: isEdit ? currency['name'].toString() : '',
-      );
-      final rateController = TextEditingController(
-        text: isEdit ? (currency['rateToUsd'] as num).toString() : '',
-      );
-      final formKey = GlobalKey<FormState>();
+    final isEdit = currency != null;
+    final codeController = TextEditingController(
+      text: isEdit ? currency['code'].toString() : '',
+    );
+    final nameController = TextEditingController(
+      text: isEdit ? currency['name'].toString() : '',
+    );
+    final rateController = TextEditingController(
+      text: isEdit ? (currency['rateToUsd'] as num).toString() : '',
+    );
+    final formKey = GlobalKey<FormState>();
 
-      final saved = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(isEdit ? 'Edit Currency' : 'Add Currency'),
-            content: SizedBox(
-              width: 560,
-              child: SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 300),
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextFormField(
-                          controller: codeController,
-                          textCapitalization: TextCapitalization.characters,
-                          enabled: !isEdit,
-                          decoration: const InputDecoration(
-                            labelText: 'Currency Code *',
-                            hintText: 'e.g., EUR, INR, AED',
-                            prefixIcon: Icon(Icons.tag),
-                          ),
-                          validator: (value) {
-                            final code = (value ?? '').trim().toUpperCase();
-                            final codeRegex = RegExp(r'^[A-Z]{3,6}$');
-                            if (code.isEmpty) {
-                              return 'Currency code is required';
-                            }
-                            if (!codeRegex.hasMatch(code)) {
-                              return 'Use 3 to 6 uppercase letters';
-                            }
-                            return null;
-                          },
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(isEdit ? 'Edit Currency' : 'Add Currency'),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: codeController,
+                        textCapitalization: TextCapitalization.characters,
+                        enabled: !isEdit,
+                        decoration: const InputDecoration(
+                          labelText: 'Currency Code *',
+                          hintText: 'e.g., EUR, INR, AED',
+                          prefixIcon: Icon(Icons.tag),
                         ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Currency Name *',
-                            hintText: 'e.g., Euro, Indian Rupee',
-                            prefixIcon: Icon(Icons.currency_exchange),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Currency name is required';
-                            }
-                            return null;
-                          },
+                        validator: (value) {
+                          final code = (value ?? '').trim().toUpperCase();
+                          final codeRegex = RegExp(r'^[A-Z]{3,6}$');
+                          if (code.isEmpty) {
+                            return 'Currency code is required';
+                          }
+                          if (!codeRegex.hasMatch(code)) {
+                            return 'Use 3 to 6 uppercase letters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Currency Name *',
+                          hintText: 'e.g., Euro, Indian Rupee',
+                          prefixIcon: Icon(Icons.currency_exchange),
                         ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: rateController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          decoration: const InputDecoration(
-                            labelText: 'Currency Units per 1 USD *',
-                            hintText: 'e.g., 83 for INR, 0.92 for EUR',
-                            prefixIcon: Icon(Icons.calculate_outlined),
-                          ),
-                          validator: (value) {
-                            final parsed = double.tryParse((value ?? '').trim());
-                            if (parsed == null || parsed <= 0) {
-                              return 'Enter a valid number greater than 0';
-                            }
-                            return null;
-                          },
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Currency name is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: rateController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
-                      ],
-                    ),
+                        decoration: const InputDecoration(
+                          labelText: 'Currency Units per 1 USD *',
+                          hintText: 'e.g., 83 for INR, 0.92 for EUR',
+                          prefixIcon: Icon(Icons.calculate_outlined),
+                        ),
+                        validator: (value) {
+                          final parsed = double.tryParse((value ?? '').trim());
+                          if (parsed == null || parsed <= 0) {
+                            return 'Enter a valid number greater than 0';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (!formKey.currentState!.validate()) {
-                    return;
-                  }
-                  final code = codeController.text.trim().toUpperCase();
-                  final name = nameController.text.trim();
-                  final rate = double.parse(rateController.text.trim());
-                  await _dbHelper.upsertCurrency(
-                    code: code,
-                    name: name,
-                    rateToUsd: rate,
-                  );
-                  if (mounted) {
-                    Navigator.pop(context, true);
-                  }
-                },
-                child: Text(isEdit ? 'Save' : 'Add'),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (saved == true) {
-        await _loadCurrencies();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(isEdit ? 'Currency updated' : 'Currency added'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
             ),
-          );
-        }
+            ElevatedButton(
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) {
+                  return;
+                }
+                final code = codeController.text.trim().toUpperCase();
+                final name = nameController.text.trim();
+                final rate = double.parse(rateController.text.trim());
+                await _dbHelper.upsertCurrency(
+                  code: code,
+                  name: name,
+                  rateToUsd: rate,
+                );
+                if (mounted) {
+                  Navigator.pop(context, true);
+                }
+              },
+              child: Text(isEdit ? 'Save' : 'Add'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (saved == true) {
+      await _loadCurrencies();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isEdit ? 'Currency updated' : 'Currency added'),
+          ),
+        );
       }
     }
+  }
 
   Future<void> _deleteCurrency(Map<String, dynamic> currency) async {
     final code = currency['code'].toString();
@@ -522,6 +528,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _showUpdateSecurityLevelDialog() async {
+    //_securityLevel
+
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Select Security Level'),
+        content: Form(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Transform.translate(
+                offset: const Offset(-24, 0),
+                child: Text('Current Security Level: $_securityLevel'),
+              ),
+              const SizedBox(height: 12),
+              RadioGroup<String>(
+                groupValue: _securityLevel,
+                onChanged: (String? value) {
+                  setState(() {
+                    _securityLevel = value!;
+                    _appSettings.saveSecurityLevel(_securityLevel);
+                  });
+                },
+                child: const Column(
+                  children: [
+                    RadioListTile<String>(
+                      value: 'LOW',
+                      title: Text('Security Questions Only (Low)'),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    RadioListTile<String>(
+                      value: 'MEDIUM',
+                      title: Text('Security Code Only (Medium)'),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    RadioListTile<String>(
+                      value: 'HIGH',
+                      title: Text(
+                        'Security Code and Security Questions (High)',
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(onPressed: () async {}, child: const Text('Update')),
+        ],
+      ),
+    );
+
+    if (updated == true && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Security code updated.')));
+    }
+  }
+
   Future<void> _showSecurityQuestionsDialog() async {
     final hadSecurityQuestions = _hasSecurityQuestions;
     final existing = await _accessCodeHelper.getSecurityQuestions();
@@ -802,7 +880,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Manage your vault security code.',
+                  'Manage Vault Security.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.textSecondary,
                   ),
@@ -858,6 +936,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: _showSecurityQuestionsDialog,
+                      ),
+                      Divider(
+                        color: AppTheme.navyBorder.withOpacity(0.7),
+                        height: 1,
+                      ),
+                      ListTile(
+                        visualDensity: const VisualDensity(vertical: -1),
+                        leading: const Icon(Icons.lock_reset_outlined),
+                        title: Text('Current Security Level: $_securityLevel'),
+                        subtitle: const Text('Set Security Level'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: _showUpdateSecurityLevelDialog,
                       ),
                     ],
                   ),
